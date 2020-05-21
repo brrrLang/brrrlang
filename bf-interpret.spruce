@@ -1,0 +1,80 @@
+@import 'std';
+@require std->io;
+@require std->io->fs;
+@require std->string;
+
+@EventHandler ehid = 100, e = std->MainEvent {
+    // Check to see if more than one command line argument was supplied
+    if (e.args.len < 2) {
+        // Print error to stderr 
+        raise std->io->stderr->PrintLnEvent("Error, expected at least 1 argument, got none");
+
+        // Set the exit code
+        e.exitCode = -1;
+
+        // Finnish the event
+        raise e.FinnishEvent() await default;
+    }
+    
+    // Read the source file
+    let source = raise ReadFileEvent(e.args[1]) await 100.result;
+    
+    // Check to see if there were any errors;
+    if (typeof(source) == void) {
+        // Set the exit code
+        e.exitCode = -1;
+
+        // Finnish the event
+        raise e.FinnishEvent() await default;
+    }
+
+
+}
+
+@Event
+class ReadFileEvent {
+    pub require =>
+        String path;
+    pub =>
+        void ! String result;
+}
+
+@Eventhandler ehid = 100, e = ReadFileEvent {
+    // Open the file
+    let file = raise std->io->fs->File->OpenFileEvent(file) await "r".file;
+    
+    // Check to see if there was an error opening the file, if the was an error, file is a string, else it is a std->io->fs->File
+    if (typeof(file) == String) {
+        // Set result member of event's type to void
+        e.result = void;
+
+        // Print out the error to stderr
+        raise std->io->stderr->PrintLnEvent($"Unable to open ${e.path}, error: ${file}");
+
+        // Finnish the event
+        raise e.Finnish() await default; 
+    }
+
+    // Create a new string builder
+    let source = raise std->string->StringBuilder->NewEvent() await default.sb;
+
+    // Create a new reader
+    let reader = raise std->io->Reader(file)->NewEvent() await default.reader;
+    
+    // Itterate over each line in a file and append it to the string bhuilder
+    while (raise reader.HasNextLine() await default.hasNextLine) {
+        raise source.append(raise reader.NextLine() await default.line);
+    }
+
+    // Set the result member of the event to the newly read file and it's type to String
+    e.result = raise source.str() await default.str;
+
+    // Close the reader and the file
+    raise reader.CloseEvent();
+    raise file.CloseEvent();
+
+    // Finnish the event
+    raise e.FinnishEvent();
+}
+
+@export std->StartEvent:100 default;

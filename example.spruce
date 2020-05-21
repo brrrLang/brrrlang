@@ -2,14 +2,14 @@
 @require std->io;
 
 @EventHandler ehid = 100, e = std->StartEvent {
-    let number = raise Foo(69, 420) await 100.result;
-    raise io->Println(number);
+    let number = raise FooEvent(69, 420) await 100.result;
+    raise std->io->PrintLnEvent(number);
     e.exitCode = 0;
     raise e.Finnish();    
 }
 
 @Event
-class Foo {
+class FooEvent {
     pub require =>
         int_32 number1;
         int_32 number2;
@@ -17,9 +17,9 @@ class Foo {
         int_32 result;
 }
 
-@EventHandler ehid = 0, e = Foo {
+@EventHandler ehid = 0, e = FooEvent {
     e.result = e.number1 * e.number2;
-    raise e.Finnish();
+    raise e.FinnishEvent();
 }
 
 @export std->StartEvent:100 default;

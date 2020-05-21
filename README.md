@@ -6,9 +6,9 @@ Spruce-lang is a language based on events, there are no function calls.
 @require std->io;
 
 @EventHandler ehid = 100, e = std->StartEvent {
-    raise io->PrintLn("Hello world");
+    raise std->io->PrintLnEvent("Hello world");
     e.exitCode = 0;
-    raise e.Finnish();
+    raise e.FinnishEvent();
 }
 
 @export std->StartEvent:100 default;
@@ -60,7 +60,7 @@ asyncourously. One event can have many attached handlers, all are called when an
 Befor you can create event handlers, you first have to create the event. This can be done like so:
 ```spruce
 @Event
-class Foo {
+class FooEvent {
     pub require =>
         int_32 number1;
         int_32 number2;
@@ -79,7 +79,7 @@ The `pub =>` block is just public members
 ### Creating an event handler
 Now that we have an event that we can raise, we can create an event handler that will be called when the event is raised
 ```spruce
-@EventHandler ehid = 100, e = Foo {
+@EventHandler ehid = 100, e = FooEvent {
     e.result = number1 * number2;
     e.Finnish();
 }
@@ -94,7 +94,7 @@ To use this event, you simpaly raise Foo, this will asyncoursouly call all the e
 would use it:
 
 ```spruce
-raise Foo(1, 100);
+raise FooEvent(1, 100);
 ```
 
 Now Foo still has some data stored in it that we want to retrieve, the result member contains the result of multiplying 1 and 100, we want to get this data out of 
@@ -102,7 +102,7 @@ the Foo event. To do this, we await an event handler. When using an await, you m
 handler that you have specified will be called asyncourously while all other handlers will still be called asyncoursouly. This will return the event object from 
 that event handler that you have specified. Using the Foo event and handler that we have just created, here is how you get the information out.
 ```
-let multiply = raise Foo(50, 10) await 100.result;
+let multiply = raise FooEvent(50, 10) await 100.result;
 ```
 This will create a variable with the value of e.result from the event handler with the ehid of 100, so in this case, it will have the value of 500.
 
@@ -113,14 +113,14 @@ Here is an expample using all of this together;
 @require std->io;
 
 @EventHandler ehid = 100, e = std->StartEvent {
-    let number = raise Foo(69, 420) await 100.result;
-    raise io->Println(number);
+    let number = raise FooEvent(69, 420) await 100.result;
+    raise std->io->PrintlnEvent(number);
     e.exitCode = 0;
-    raise e.Finnish();    
+    raise e.FinnishEvent();    
 }
 
 @Event
-class Foo {
+class FooEvent {
     pub require =>
         int_32 number1;
         int_32 number2;
@@ -130,7 +130,7 @@ class Foo {
 
 @EventHandler ehid = 0, e = Foo {
     e.result = e.number1 * e.number2;
-    raise e.Finnish();
+    raise e.FinnishEvent();
 }
 
 @export std->StartEvent:100 default;
@@ -144,9 +144,9 @@ Events are also objects so you can store them like a so
 
 @EventHandler ehid = 100, e = std->StartEvent {
     let fooEvent = raise Foo(69, 420) await 100;
-    raise io->Println(fooEvent.number);
+    raise std->io->PrintLnEvent(fooEvent.number);
     e.exitCode = 0;
-    raise e.Finnish();    
+    raise e.FinnishEvent();    
 }
 // Rest of program
 ```
