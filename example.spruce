@@ -1,0 +1,25 @@
+@import 'std';
+@require std->io;
+
+@EventHandler ehid = 100, e = std->StartEvent {
+    let number = raise Foo(69, 420) await 100.result;
+    raise io->Println(number);
+    e.exitCode = 0;
+    raise e.Finnish();    
+}
+
+@Event
+class Foo {
+    pub require =>
+        int_32 number1;
+        int_32 number2;
+    pub =>
+        int_32 result;
+}
+
+@EventHandler ehid = 0, e = Foo {
+    e.result = e.number1 * e.number2;
+    raise e.Finnish();
+}
+
+@export std->StartEvent:100 default;
