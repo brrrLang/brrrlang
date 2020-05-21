@@ -2,6 +2,8 @@
 Spruce-lang is a language based on events, there are no function calls.
 ## Hello world in Spruce-lang
 ```spruce
+@export std->StartEvent:100 default;
+
 @import 'std';
 @require std->io;
 
@@ -10,8 +12,6 @@ Spruce-lang is a language based on events, there are no function calls.
     e.exitCode = 0;
     raise e.FinnishEvent();
 }
-
-@export std->StartEvent:100 default;
 ```
 
 Heres how it works
@@ -83,7 +83,7 @@ Now that we have an event that we can raise, we can create an event handler that
 ```spruce
 @EventHandler ehid = 100, e = FooEvent {
     e.result = number1 * number2;
-    e.Finnish();
+    e.FinnishEvent();
 }
 ```
 The `@EventHandler` tells the compiler that this is an event handler, the `ehid` is the event handler id, and is used to distiguish between diffrent event handlers. 
@@ -111,6 +111,8 @@ This will create a variable with the value of e.result from the event handler wi
 Here is an expample using all of this together;
 
 ```spruce
+@export std->StartEvent:100 default;
+
 @import 'std';
 @require std->io;
 
@@ -134,8 +136,6 @@ class FooEvent {
     e.result = e.number1 * e.number2;
     raise e.FinnishEvent();
 }
-
-@export std->StartEvent:100 default;
 ```
 
 Events are also objects so you can store them like a so
