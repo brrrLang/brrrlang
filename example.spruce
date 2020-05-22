@@ -1,25 +1,28 @@
-@export std->StartEvent:100 default;
+@export std::StartEvent:100 default;
 
 @import 'std';
 @require std->io;
 
-@EventHandler ehid = 100, e = std->StartEvent {
+@EventHandler ehid = 100, e = std::StartEvent {
     let number = raise FooEvent(69, 420) await 100.result;
-    raise std->io->PrintLnEvent(number);
+    raise std::io::PrintLnEvent(number);
     e.exitCode = 0;
-    raise e.Finnish();    
+    raise e.Finnish() await default;    
 }
 
 @Event
 class FooEvent {
-    pub require =>
+    pub require {
         int_32 number1;
         int_32 number2;
-    pub =>
+    }
+
+    pub {
         int_32 result;
+    }
 }
 
 @EventHandler ehid = 0, e = FooEvent {
     e.result = e.number1 * e.number2;
-    raise e.FinnishEvent();
+    raise e.FinnishEvent() await default;
 }

@@ -1,15 +1,15 @@
 // Preforming exports 
-@export std->StartEvent:100 default;
+@export std::StartEvent:100 default;
 @export ParseEvent:100 'bf';
 @export ParseEvent:200 'csv';
 
 // Importing all the required libraries
 @import 'std';
-@require std->io;
-@require std->io->fs;
-@require std->string;
-@require std->string->conv;
-@require std->filter;
+@require std::io;
+@require std::io::fs;
+@require std::string;
+@require std::string::conv;
+@require std::filter;
 
 enum BrainFuck(String) {
     INC => "+",
@@ -26,11 +26,11 @@ enum BrainFuck(String) {
 // Main Method
 //--------------------------------------------------------------------------------------------------------------------------------
 
-@EventHandler ehid = 100, e = std->MainEvent {
+@EventHandler ehid = 100, e = std::MainEvent {
     // Check to see if more than one command line argument was supplied
     if (e.args.len < 2) {
         // Print error to stderr 
-        raise std->io->stderr->PrintLnEvent("Error, expected at least 1 argument, got none");
+        raise std::io::stderr::PrintLnEvent("Error, expected at least 1 argument, got none");
 
         // Set the exit code
         e.exitCode = -1;
@@ -68,35 +68,38 @@ enum BrainFuck(String) {
 
 @Event
 class ReadFileEvent {
-    pub require =>
+    pub require {
         String path;
-    pub =>
+    }
+
+    pub {
         void ! String result;
+    }
 }
 
 // ! means the following member/trait can be either of these types
 
 @Eventhandler ehid = 100, e = ReadFileEvent {
     // Open the file
-    let file = raise std->io->fs->File->OpenFileEvent(file) await "r".file;
+    let file = raise std::io::fs::File::OpenFileEvent(file) await "r".file;
     
-    // Check to see if there was an error opening the file, if the was an error, file is a string, else it is a std->io->fs->File
+    // Check to see if there was an error opening the file, if the was an error, file is a string, else it is a std::io::fs::File
     if (typeof(file) == String) {
         // Set result member of event's type to void
         e.result = void;
 
         // Print out the error to stderr
-        raise std->io->stderr->PrintLnEvent($"Unable to open ${e.path}, error: ${file}");
+        raise std::io::stderr::PrintLnEvent($"Unable to open ${e.path}, error: ${file}");
 
         // Finnish the event
         raise e.Finnish() await default; 
     }
 
     // Create a new string builder
-    let source = raise std->string->StringBuilder->NewEvent() await default.sb;
+    let source = raise std::string::StringBuilder::NewEvent() await default.sb;
 
     // Create a new reader
-    let reader = raise std->io->Reader(file)->NewEvent() await default.reader;
+    let reader = raise std::io::Reader(file)::NewEvent() await default.reader;
     
     // Itterate over each line in a file and append it to the string bhuilder
     while (raise reader.HasNextLine() await default.hasNextLine) {
@@ -120,11 +123,13 @@ class ReadFileEvent {
 
 @Event
 class ParseEvent {
-    pub require =>
+    pub require {
         String source;
-    pub ! =>
+    }
+    pub ! {
         Vec<int_32> inputs;
-        Vec<BrainFuck> source; 
+        Vec<BrainFuck> source;   
+    } 
 }
 
 // ! means that an object can contain only one of the following traits
@@ -137,11 +142,11 @@ class ParseEvent {
     
     // Create a new filter that can be used to quickley convert a string into a Vec by enum values
     // The skip handler defines the behaviour when a value does not match any of the enum varients, this will just skip that value 
-    let filter = raise std->filter->EnumFilter->NewEvent(BrainFuck) await "skip".filter;
+    let filter = raise std::filter::EnumFilter::NewEvent(BrainFuck) await "skip".filter;
 
     // This converts the source code into a Vec of brianfuck enums.
-    // The String->ToVecEvent event splits an string up into a Vec of indivisual strings; 
-    e.source = raise std->filter->FilterByEvent(filter, raise source.ToVecEvent() await default.vec);
+    // The String::ToVecEvent event splits an string up into a Vec of indivisual strings; 
+    e.source = raise std::filter::FilterByEvent(filter, raise source.ToVecEvent() await default.vec);
     raise e.FinnishEvent();
 }
 
@@ -152,21 +157,21 @@ class ParseEvent {
     
     let chars = raise e.source.ToByteVecEvent() await default;
 
-    let source = raise std->string->StringBuilder->NewEvent() await default.sb;
+    let source = raise std::string::StringBuilder::NewEvent() await default.sb;
     
-    let vec = raise std->vec->NewEvent<int_32>() await default.vec;
+    let vec = raise std::vec::NewEvent<int_32>() await default.vec;
 
     for (i : chars) {
         if (i > 47 && < 58) {
-            raise sb.append(raise std->string->FromByteEvent(i) await 'utf-8'.string);
+            raise sb.append(raise std::string::FromByteEvent(i) await 'utf-8'.string);
         } else if (i == 54) {
-            raise vec.append(raise std->string->conv->stoi(raise sb.str() await default.str) await default.i) await default;
+            raise vec.append(raise std::string::conv::stoi(raise sb.str() await default.str) await default.i) await default;
             raise str.clr() await default;
         }
     }
 
     if (str.len > 1) {
-        raise vec.append(raise std->string->conv->stoi(raise sb.str() await default.str) await default.i) await default;
+        raise vec.append(raise std::string::conv::stoi(raise sb.str() await default.str) await default.i) await default;
         raise str.clr() await default;
     }
 
