@@ -21,6 +21,29 @@ impl fmt::Display for Tag {
 	}
 }
 
+#[derive(Clone, Debug)]
+pub struct Line { //Holder obj with relevent info about each instructions
+	pub line_text: String,
+	pub scope_indentation: i32,
+	pub scope_id: i32,
+	pub line_num: i32,
+	pub line_char_start: usize,
+	pub line_char_end: usize,
+}
+
+impl Line {
+	pub fn new() -> Line{
+		return Line{
+			line_text: String::new(),
+			scope_indentation: -1,
+			scope_id: -1,
+			line_num: -1,
+			line_char_start: 0,
+			line_char_end: 0,
+		}
+	}
+}
+
 #[derive(Clone)]
 pub enum Token {
 	Tag(Tag),           // @
@@ -51,38 +74,23 @@ impl fmt::Display for Token {
 			Token::Number(n) 			=> format!("Number {}", n),
 			Token::String(s)		=> format!("String {}", s),
 			Token::Identifier(i)	=> format!("Identifier {}", i),
-			Token::Let(n)			=> format!("Let {}", i),
+			Token::Let(n)			=> format!("Let {}", n),
 			Token::Raise(e)			=> format!("Raise {}", e),
 			Token::Await(a)			=> format!("Await {}", a),
-			Token::LBrace()					=> format!("LBrace"),
-			Token::RBrace()					=> format!("RBrace"),
-			Token::RCurlyBrace()			=> format!("RCurlyBrace"),
-			Token::LCurlyBrace()			=> format!("LCurlyBrace"),
-			Token::Period()					=> format!("Period"),
-			Token::Comma()					=> format!("Comma"),
-			Token::Star()					=> format!("Star"),
-			Token::ScopeResolution()		=> format!("ScopeResolution"),
-			Token::Assignment()				=> format!("Assignment"),
-			Token::SemiColon()				=> format!("SemiColon"),
-			Token::Pub()					=> format!("Pub"),
-			Token::Require()				=> format!("Require")
+			Token::LBrace					=> format!("LBrace"),
+			Token::RBrace					=> format!("RBrace"),
+			Token::RCurlyBrace			=> format!("RCurlyBrace"),
+			Token::LCurlyBrace			=> format!("LCurlyBrace"),
+			Token::Period					=> format!("Period"),
+			Token::Comma					=> format!("Comma"),
+			Token::Star					=> format!("Star"),
+			Token::ScopeResolution		=> format!("ScopeResolution"),
+			Token::Assignment				=> format!("Assignment"),
+			Token::SemiColon				=> format!("SemiColon"),
+			Token::Pub					=> format!("Pub"),
+			Token::Require				=> format!("Require")
 		})
 	}
 }
 
-fn tokenize(source: &String) -> Vec<Token> {
-	let mut temp = String::new();
-	let mut tokens: Vec<Token> = Vec::new();
-	let chars = source.chars();
-	let mut i = 0;
 
-	while i < chars.len() {
-		let char = chars[i];
-
-
-
-		i += 1;
-	}
-
-tokens
-}
