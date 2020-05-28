@@ -21,8 +21,8 @@ the module that have been outline in the mod.spruce
 - `@EventHandler ehid = 100, e = std::StartEvent` is the main method of your spruce application. It is a EventHandler for the StartEvent, so everytime a StartEvent 
 is 
 raised, once the runtime hase been initlised, the StartEvent is raised and this EventHandler is called asyncouriously.
-- `raise std->io->PrintLnEvent();` This line raises the std->io->PrintLnEvent event with the arguments of "Hello world". This causes all the EventHandlers for 
-std->io->PrintLineEvent to be called 
+- `raise std::io::PrintLnEvent("Hello world");` This line raises the std::io::PrintLnEvent event with the arguments of "Hello world". This causes all the EventHandlers for 
+std::io::PrintLineEvent to be called 
 asyncourously. This prints 'hello world' and the newline charcter to the console.
 - `e.exitCode = 0;` This sets the value for exitCode for the StartEvent to 0, events are an objects that inherits the event class.
 - `raise e.FinnishEvent() await default` This calls the finnish method on the StartEvent, this tells the application that this event's execution has been completed
