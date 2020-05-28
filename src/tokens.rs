@@ -26,7 +26,7 @@ pub struct Line { //Holder obj with relevent info about each instructions
 	pub line_text: String,
 	pub scope_indentation: i32,
 	pub scope_id: i32,
-	pub line_num: i32,
+	pub line_num: usize,
 	pub line_char_start: usize,
 	pub line_char_end: usize,
 }
@@ -35,9 +35,9 @@ impl Line {
 	pub fn new() -> Line{
 		return Line{
 			line_text: String::new(),
-			scope_indentation: -1,
-			scope_id: -1,
-			line_num: -1,
+			scope_indentation: 0,
+			scope_id: 0,
+			line_num: 0,
 			line_char_start: 0,
 			line_char_end: 0,
 		}
