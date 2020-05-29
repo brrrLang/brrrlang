@@ -219,11 +219,11 @@ Events are also objects so you can store them like a so
                   |                       +--------------------------------+
                   |
                   v
-    +-------------+-------------------+
-    |                                 |
-    |Convert to low-level instructions|
-    |                                 |
-    +-------------+-------------------+
+    +-------------+---------------------------+
+    |                                         |
+    |Magicly convert to low-level instructions|
+    |                                         |
+    +-------------+---------------------------+
                   |
                   |
                   |
