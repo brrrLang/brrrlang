@@ -16,7 +16,6 @@ fn main() {
     let file = read_file(&args[1]);
     println!("Source file: {}", file);
     let tokens = tokenize(&file);
-    println!("Lines = ")
 }
 
 fn read_file(path: &String) -> String{
@@ -59,7 +58,7 @@ fn tokenize(source: &String) -> Vec<tokens::Token> {
 	while source_loc < chars.len() {
         last_char = current_char.clone();
 		current_char = chars[source_loc];
-        if current_char == ';'  || current_char == '{' || current_char == '}'{
+        if current_char == ';'  || current_char == '{' || current_char == '}' {
             line = tokens::Line::new();
             line.line_text = String::from(chars[line_start..line_end+1].iter().collect::<String>().trim());
             line.scope_indentation = scope_indentation;
@@ -67,7 +66,7 @@ fn tokenize(source: &String) -> Vec<tokens::Token> {
             line.line_char_start = line_start;
             line.line_char_end = line_end;
             println!("Line {:?}",line.line_text);
-            tokenize_thread_handles.push(tokenizer_thread_handler(&line, &lines));
+            tokenize_thread_handles.push(tokenizer_thread(&line, &lines));
             line_start = source_loc + 1;
             line_end = line_start;
             line_num +=1;
@@ -79,7 +78,7 @@ fn tokenize(source: &String) -> Vec<tokens::Token> {
             }
             line_start = source_loc + 1;
             line_end = line_start;
-        } else if current_char == '/' && last_char == '*' {
+        } else if current_char == '/' && last_char == '*' { //Multiline comment
             println!("\n\n\n\nAdvoiding a multiline comment");
             while source_loc < chars.len() && !(last_char == '*' && current_char == '/') {
                 last_char = current_char.clone();
@@ -99,14 +98,35 @@ fn tokenize(source: &String) -> Vec<tokens::Token> {
         handle.join().unwrap();
     }
 
-    println!("Lines = {:?}",lines);
+    println!("Lines = {:#?}",lines);
 	return tokens;
 }
-fn tokenizer_thread_handler(line: &tokens::Line, lines_data: &Arc<Mutex<Vec<tokens::Line>>>) -> thread::JoinHandle<()> {
-    let lines_data_local = Arc::clone(lines_data);
+fn tokenizer_thread(line: &tokens::Line, lines_data: &Arc<Mutex<Vec<tokens::Line>>>) -> thread::JoinHandle<()> {
+    let lines_data = Arc::clone(lines_data);
     let mut line_local = line.clone();
     let handle = thread::spawn(move || {
-        let mut mutex_lines_data = lines_data_local.lock().unwrap();
+        let mut tokens: Vec<tokens::Token> = vec!();
+        let line_text: Vec<char> = line_local.line_text.clone().chars().collect();
+        let mut line_split: Vec<String> = vec!();
+        let mut line_split_pointer = 0;
+        let i: usize = 0;
+        while i < line_text.len() {
+            if line_text[i] == ' '{
+                line_split_pointer+=1;
+            } else if line_text[i] == '='{
+                line_split_pointer+=2;
+                line_split[line_split_pointer-1].push(line_text[i]);
+            } else {
+                line_split[line_split_pointer].push(line_text[i]);
+            }
+            
+            while line_split_pointer >= line_split.len(){
+                line_split.push(String::new());
+            }
+        }
+        //Everything should be done by now
+        line_local.line_token = tokens;
+        let mut mutex_lines_data = lines_data.lock().unwrap();
         mutex_lines_data.push(line_local);
     });
     return handle;

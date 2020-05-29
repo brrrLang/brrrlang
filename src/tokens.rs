@@ -1,6 +1,6 @@
 use std::fmt;
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub enum Tag {
 	Export,
 	Import,
@@ -24,6 +24,7 @@ impl fmt::Display for Tag {
 #[derive(Clone, Debug)]
 pub struct Line { //Holder obj with relevent info about each instructions
 	pub line_text: String,
+	pub line_token: Vec<Token>,
 	pub scope_indentation: i32,
 	pub scope_id: i32,
 	pub line_num: usize,
@@ -35,6 +36,7 @@ impl Line {
 	pub fn new() -> Line{
 		return Line{
 			line_text: String::new(),
+			line_token: vec!(),
 			scope_indentation: 0,
 			scope_id: 0,
 			line_num: 0,
@@ -44,7 +46,7 @@ impl Line {
 	}
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum Token {
 	Tag(Tag),           // @
 	Number(i32),        // [0-9]+

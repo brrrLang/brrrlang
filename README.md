@@ -157,3 +157,82 @@ Events are also objects so you can store them like a so
 }
 // Rest of program
 ```
+
+## Compiler overview
+```
+      +-------------------------+
+      |                         |
+      |Program is read to string|
+      |                         |
+      +-----------+-------------+
+                  |
+                  |
+                  v
++-----------------+--------------------+
+|                                      |
+|Split into lines with scope infomation|XXXXXXXXXX
+|                                      |         XXXXX
++-----------------+--------------------+             XX
+                  |                                   XX
+                  |                                    XX
+                  |                                     X
+                  |                         +------------------------+
+                  |                         |                        |
+                  |                         |New thread for each line|
+                  |                         |                        |
+                  |                         +-----------+------------+
+                  |                                     |
+                  |                                     |
+                  |                                     |
+                  |                                     v
+                  |                    +----------------+-------------------+
+                  |                    |                                    |
+                  |                    | Split via keywords (Spaces, +,=,@) |
+                  |                    |                                    |
+                  |                    +----------------+-------------------+
+                  |                                     |
+                  |                                     |
+                  |                                     v
+                  |                  +------------------+-------------------+
+                  |                  |                                      |
+                  |                  | Create context for the keywords      |
+                  |                  | (Variables, loop, if statement, etc) |
+                  |                  |                                      |
+                  |                  +------------------+-------------------+
+                  |                                     |
+                  |                                     |
+                  |                                     |
+                  |                                     v
+                  |                      +--------------+-------------------+
+                  |                      |                                  |
+                  |                      | Use context to convert to tokens |
+                  |                      |                                  |
+                  |                      +--------------+-------------------+
+                  |                                     |
+                  |                                     |
+                  v                                     |
+    +-------------+-----------------+                   v
+    |                               |     +-------------+------------------+
+    | Wait for threads to compleate |     |                                |
+    |                               +<----+    Save data to Arc Multex     |
+    +-------------+-----------------+     |                                |
+                  |                       +--------------------------------+
+                  |
+                  v
+    +-------------+-------------------+
+    |                                 |
+    |Convert to low-level instructions|
+    |                                 |
+    +-------------+-------------------+
+                  |
+                  |
+                  |
+                  v
+ +----------------+---------------------------+
+ |                                            |
+ | Convert low-level instructions to assembly |
+ | on a per-architecture basis                |
+ |                                            |
+ +--------------------------------------------+
+
+```
