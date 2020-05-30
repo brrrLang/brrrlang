@@ -4,6 +4,7 @@ use std::env;
 use std::process;
 use std::sync::{Arc,Mutex};
 use std::thread;
+use std::time::Duration;
 
 pub mod tokens;
 
@@ -67,6 +68,7 @@ fn tokenize(source: &String) -> Vec<tokens::Token> {
             line.line_char_end = line_end;
             println!("Line {:?}",line.line_text);
             tokenize_thread_handles.push(tokenizer_thread(&line, &lines));
+            // thread::sleep(Duration::new(5,0));
             line_start = source_loc + 1;
             line_end = line_start;
             line_num +=1;
@@ -102,28 +104,74 @@ fn tokenize(source: &String) -> Vec<tokens::Token> {
 	return tokens;
 }
 fn tokenizer_thread(line: &tokens::Line, lines_data: &Arc<Mutex<Vec<tokens::Line>>>) -> thread::JoinHandle<()> {
+    println!("\n\n\n\n\nTokonizer thread started");
     let lines_data = Arc::clone(lines_data);
     let mut line_local = line.clone();
     let handle = thread::spawn(move || {
         let mut tokens: Vec<tokens::Token> = vec!();
         let line_text: Vec<char> = line_local.line_text.clone().chars().collect();
-        let mut line_split: Vec<String> = vec!();
+        
+        /*
+        Splits the line into the relavent strings by operators and spaces
+        */
+        let mut line_split: Vec<String> = vec!(String::new());
         let mut line_split_pointer = 0;
-        let i: usize = 0;
+        let mut i: usize = 0;
+        println!("Line length: {}",line_text.len());
         while i < line_text.len() {
+            println!("Processing num {}, char {}",i,line_text[i]);
             if line_text[i] == ' '{
-                line_split_pointer+=1;
-            } else if line_text[i] == '='{
+                if line_split[line_split_pointer].len() != 0 {
+                    line_split_pointer+=1;
+                }
+            } else if (line_text[i] == '=' && line_text[i+1] != '>' && line_text[i+1] != '=') || line_text[i] == '+' || line_text[i] == '-' || line_text[i] == '*' || line_text[i] == '@' {
                 line_split_pointer+=2;
+                line_split.push(String::new());
                 line_split[line_split_pointer-1].push(line_text[i]);
-            } else {
+            } else if (line_text[i] == '/' && line_text[i+1] == '/') || (line_text[i] == ':' && line_text[i+1] == ':'){
+                line_split_pointer+=2;
+                line_split.push(String::new());
+                line_split.push(String::new());
+                line_split[line_split_pointer-1].push(line_text[i]);
+                line_split[line_split_pointer-1].push(line_text[i+1]);
+                i+=1;
+            } else if line_text[i] == ':' && line_text[i+1] != ':'{
+                line_split_pointer+=2;
+                line_split.push(String::new());
+                line_split[line_split_pointer-1].push(line_text[i]);
+            } else if line_text[i] == ';' { //ignore
+            } else if line_text[i] == '=' || (line_text[i+1] == '=' && line_text[i+1] == '>') {
+                line_split_pointer+=3;
+                line_split.push(String::new());
+                line_split.push(String::new());
+                line_split[line_split_pointer-1].push(line_text[i]);
+                line_split[line_split_pointer-1].push(line_text[i+1]);
+                i+=1;
+            }
+            else {
                 line_split[line_split_pointer].push(line_text[i]);
             }
             
             while line_split_pointer >= line_split.len(){
                 line_split.push(String::new());
             }
+            i+=1;
         }
+        // line_split_pointer = 0;
+        // let mut x = 0;
+        // while line_split_pointer < line_split.len() { //Clear out empty splits
+        //     if line_split[line_split_pointer] == "" {
+        //         line_split.remove(line_split_pointer-x);
+        //         x+=1;
+        //     } else {
+        //         line_split_pointer+=1;
+        //     }
+        // }
+        /*
+        Matches the keywords using context
+        */
+        i = 0;
+        println!("Lines split from: {:?} to: {:?}",line_local.line_text,line_split);
         //Everything should be done by now
         line_local.line_token = tokens;
         let mut mutex_lines_data = lines_data.lock().unwrap();
