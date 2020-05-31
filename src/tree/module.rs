@@ -1,5 +1,5 @@
 use crate::syntax_tree;
-
+#[derive(Clone)]
 pub struct Module {
 	pub module_name: String,
 	pub sub_modules: Vec<Module>,

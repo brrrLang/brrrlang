@@ -1,5 +1,6 @@
 use crate::tree::module::Module;
 
+#[derive(Clone)]
 pub struct Require {
 	module: Module
 }

@@ -1,6 +1,7 @@
 use crate::syntax_tree::SyntaxTreeElement;
 use crate::tree::Tree;
 
+#[derive(Clone)]
 pub struct Import {
 	tree: Tree,
 }
@@ -21,6 +22,6 @@ impl SyntaxTreeElement for Import {
 	}
 
 	fn to_code(&self) -> String {
-		format!("Import {}", tree)
+		format!("Import {}", self.tree.name)
 	}
 }
