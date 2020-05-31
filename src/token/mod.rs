@@ -32,31 +32,52 @@ impl Line {
 
 #[derive(Clone, Debug)]
 pub enum Token {
-	Tag,           // @
+	Tag,           		// @
 	Number(i32),        // [0-9]+
 	String(String),     // ""
 	Identifier(String), // a-zA-Z[a-zA-Z_0-9]+
 	Let(String),        // let
 	Raise(String),      // raise
 	Await(i32),         // await
+	Bool(bool),			// True, False
 	LBrace,             // (
 	RBrace,             // )
-	LCurlyBrace,       // {
-	RCurlyBrace,       // }
+	LCurlyBrace,        // {
+	RCurlyBrace,        // }
+	LSquareBrace,		// [
+	RSquareBrace,		// ]
+	Equal,				// =
+	LogicalEqual,		// ==
+	LogicalNotEqual,	// !=
+	LogicalAnd,			// &&
+	LogicalOr,			// ||
+	LessThan,			// <
+	MoreThan,			// >
+	LessThanOrEqual,	// <=
+	MoreThanOrEqual,	// >=
+	Plus,				// +
+	Minus,				// -
+	PlusEqual,			// +=
+	MinusEqual,			// -=
+	PlusPlus,			// ++
+	MatchArrow,			// =>
+	ExclamationMark, 	// !
 	Period,             // .
 	Comma,              // ,
 	Star,               // *
 	ScopeResolution,    // ::
 	Assignment,         // =
 	SemiColon,          // ;
+	DiscardVar,			// _
 	Pub,                // pub
 	Require,            // require
+	Defualt,			// defualt
 }
 
 impl fmt::Display for Token {
 	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
 		write!(f, "{}", match self {
-			Token::Tag() 			=> format!("Tag"),
+			Token::Tag 			=> format!("Tag"),
 			Token::Number(n) 			=> format!("Number {}", n),
 			Token::String(s)		=> format!("String {}", s),
 			Token::Identifier(i)	=> format!("Identifier {}", i),
@@ -67,6 +88,8 @@ impl fmt::Display for Token {
 			Token::RBrace					=> format!("RBrace"),
 			Token::RCurlyBrace			=> format!("RCurlyBrace"),
 			Token::LCurlyBrace			=> format!("LCurlyBrace"),
+			Token::LSquareBrace			=> format!("LSquareBrace"),
+			Token::RSquareBrace			=> format!("RSquareBrace"),
 			Token::Period					=> format!("Period"),
 			Token::Comma					=> format!("Comma"),
 			Token::Star					=> format!("Star"),
