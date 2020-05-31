@@ -286,20 +286,38 @@ pub fn tokenizer_thread(line: &Line, lines_data: &Arc<Mutex<Vec<Line>>>, channel
 		i = 0;
 		let mut stringToken: String;
 		let mut currentToken: Token;
+		let mut line_Tokens: Vec<Token> = vec!();
 		while i < line_split.len() {
 			stringToken = line_split[i].clone();
-			// Check if keyword
-			currentToken = match stringToken.as_str() {
-				"@" => Token::Tag,
-				"(" => Token::LBrace,
-				")" => Token::RBrace,
-				"{" => Token::LCurlyBrace,
-				"}" => Token::RCurlyBrace,
-				"[" => Token::LSquareBrace,
-				"]" => Token::RSquareBrace,
-				"." => Token::Period,
-				"," => Token::Comma,
-				 _	=> {println!("Fuck off"); Token::Period}
+			// Check if keyword line_Tokens.push()
+			match stringToken.as_str() {
+				"@" => line_Tokens.push(Token::Tag),
+				"(" => line_Tokens.push(Token::LBrace),
+				")" => line_Tokens.push(Token::RBrace),
+				"{" => line_Tokens.push(Token::LCurlyBrace),
+				"}" => line_Tokens.push(Token::RCurlyBrace),
+				"[" => line_Tokens.push(Token::LSquareBrace),
+				"]" => line_Tokens.push(Token::RSquareBrace),
+				"import" => line_Tokens.push(Token::Import),
+				"require" => line_Tokens.push(Token::Require),
+				"export" => line_Tokens.push(Token::Export),
+				"defualt" => line_Tokens.push(Token::Defualt),
+				"enum" => line_Tokens.push(Token::Enum),
+				";" => line_Tokens.push(Token::SemiColon),
+				"." => line_Tokens.push(Token::Period),
+				"," => line_Tokens.push(Token::Comma),
+				 _	=> {
+					 //@ tags first
+					 if line_Tokens[i-1] == Token::Tag {
+						match stringToken.as_str() {
+							"import" => line_Tokens.push(Token::Import),
+							"require" => line_Tokens.push(Token::Require),
+							"export" => line_Tokens.push(Token::Export),
+							"defualt" => line_Tokens.push(Token::Defualt),
+							_ => println!("Eat my shiny metal ass beacuse I should error this"),
+						}
+					 }
+				 }
 			};
 			i+=1;
 		}

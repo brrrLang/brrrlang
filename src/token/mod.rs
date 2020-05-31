@@ -30,7 +30,7 @@ impl Line {
 	}
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum Token {
 	Tag,           		// @
 	Number(i32),        // [0-9]+
@@ -72,6 +72,9 @@ pub enum Token {
 	Pub,                // pub
 	Require,            // require
 	Defualt,			// defualt
+	Import,				// import
+	Export,				// export
+	Enum,				// enum
 }
 
 impl fmt::Display for Token {
@@ -117,6 +120,9 @@ impl fmt::Display for Token {
 			Token::Pub					=> format!("Pub"),
 			Token::Require				=> format!("Require"),
 			Token::Defualt				=> format!("Defualt"),
+			Token::Import				=> format!("Import"),
+			Token::Export				=> format!("Export"),
+			Token::Enum					=> format!("Enum"),
 		})
 	}
 }
