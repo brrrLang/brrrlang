@@ -1,3 +1,1 @@
-enum BrainFuck(String) {
-INC => "s +",DEC => "-s",SLF => "<d",SRT => "d>",IN  => ",d",OUT => "d.",JNZ => "]d",SJP => "[d"
-}
+HI <5>;
