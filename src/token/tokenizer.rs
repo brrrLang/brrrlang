@@ -9,6 +9,7 @@ use std::thread;
 use std::time::{Duration, Instant};
 use ansi_term::Colour;
 
+use crate::token;
 
 pub fn read_file(path: &String) -> String{
 	// Open the file
@@ -42,9 +43,9 @@ pub fn compile_error(error: ErrorWarning) {
 
 }
 
-pub fn tokenize(source: &String) -> Vec<tokens::Token> {
-	let mut tokens: Vec<tokens::Token> = vec!();
-	let mut lines: Arc<Mutex<Vec<tokens::Line>>> = Arc::new(Mutex::new(vec!()));
+pub fn tokenize(source: &String) -> Vec<token::Token> {
+	let mut tokens: Vec<token::Token> = vec!();
+	let mut lines: Arc<Mutex<Vec<token::Line>>> = Arc::new(Mutex::new(vec!()));
 	let chars: Vec<char> = source.chars().map( |x| match x { //Converts to Vec<char> and removes tabs and somtimes occouring \r newline
 		'\t' => ' ',
 		'\r' => ' ',
@@ -53,7 +54,7 @@ pub fn tokenize(source: &String) -> Vec<tokens::Token> {
 	let mut current_char: char = ' ';
 	let mut last_char: char;
 	let mut source_loc = 0;
-	let mut line: tokens::Line;
+	let mut line: token::Line;
 	let mut line_num: usize = 0;
 	let mut actual_line_num: usize = 1;
 	let mut line_start: usize = 0;
@@ -71,7 +72,7 @@ pub fn tokenize(source: &String) -> Vec<tokens::Token> {
 		last_char = current_char.clone();
 		current_char = chars[source_loc];
 		if current_char == ';'  || current_char == '{' || current_char == '}' {
-			line = tokens::Line::new();
+			line = token::Line::new();
 			line.line_text = String::from(chars[line_start..line_end+1].iter().collect::<String>().trim());
 			if current_char == '{' {
 				scope_indentation+=1;
@@ -174,13 +175,13 @@ pub fn tokenize(source: &String) -> Vec<tokens::Token> {
 	println!("Lines = {:#?}",lines);
 	return tokens;
 }
-pub fn tokenizer_thread(line: &tokens::Line, lines_data: &Arc<Mutex<Vec<tokens::Line>>>, channel_tx: &mpsc::Sender<i32>) -> thread::JoinHandle<()> {
+pub fn tokenizer_thread(line: &token::Line, lines_data: &Arc<Mutex<Vec<token::Line>>>, channel_tx: &mpsc::Sender<i32>) -> thread::JoinHandle<()> {
 	println!("\n\n\n\n\nTokonizer thread started");
 	let lines_data = Arc::clone(lines_data);
 	let mut line_local = line.clone();
 	let channel_thread_tx = channel_tx.clone();
 	let handle = thread::spawn(move || {
-		let mut tokens: Vec<tokens::Token> = vec!();
+		let mut tokens: Vec<token::Token> = vec!();
 		println!("Line text: {}", line_local.line_text);
 		let line_text: Vec<char> = line_local.line_text.clone().chars().collect();
 
@@ -287,7 +288,7 @@ pub fn tokenizer_thread(line: &tokens::Line, lines_data: &Arc<Mutex<Vec<tokens::
 		//Everything should be done by now
 		line_local.line_token = tokens;
 		let mut mutex_lines_data = lines_data.lock().unwrap();
-		while mutex_lines_data.len() <= line_local.line_num { mutex_lines_data.push(tokens::Line::new())}
+		while mutex_lines_data.len() <= line_local.line_num { mutex_lines_data.push(token::Line::new())}
 		mutex_lines_data[line_local.line_num] = line_local.clone();
 		channel_thread_tx.send(0).unwrap();
 	});
