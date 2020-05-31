@@ -25,9 +25,11 @@ impl fmt::Display for Tag {
 pub struct Line { //Holder obj with relevent info about each instructions
 	pub line_text: String,
 	pub line_token: Vec<Token>,
+	pub line_split: Vec<String>,
 	pub scope_indentation: i32,
-	pub scope_id: i32,
+	pub scope_id_chain: Vec<i32>,
 	pub line_num: usize,
+	pub actual_line_num: usize,
 	pub line_char_start: usize,
 	pub line_char_end: usize,
 }
@@ -37,9 +39,11 @@ impl Line {
 		return Line{
 			line_text: String::new(),
 			line_token: vec!(),
+			line_split: vec!(),
 			scope_indentation: 0,
-			scope_id: 0,
+			scope_id_chain: vec!(),
 			line_num: 0,
+			actual_line_num: 0,
 			line_char_start: 0,
 			line_char_end: 0,
 		}
