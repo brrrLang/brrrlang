@@ -1,29 +1,9 @@
 use std::fmt;
-
-#[derive(Copy, Clone, Debug)]
-pub enum Tag {
-	Export,
-	Import,
-	Require,
-	Event,
-	EventHandler,
-}
-
-impl fmt::Display for Tag {
-	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-		write!(f, "{}", match self{
-			Tag::Export => "Export",
-			Tag::Import => "Import",
-			Tag::Require => "Require",
-			Tag::Event => "Event",
-			Tag::EventHandler => "EventHandler"
-		})
-	}
-}
+pub mod tokenizer;
 
 #[derive(Clone, Debug)]
 pub struct Line { //Holder obj with relevent info about each instructions
-	pub line_text: String,
+pub line_text: String,
 	pub line_token: Vec<Token>,
 	pub line_split: Vec<String>,
 	pub scope_indentation: i32,
@@ -52,7 +32,7 @@ impl Line {
 
 #[derive(Clone, Debug)]
 pub enum Token {
-	Tag(Tag),           // @
+	Tag,           // @
 	Number(i32),        // [0-9]+
 	String(String),     // ""
 	Identifier(String), // a-zA-Z[a-zA-Z_0-9]+
@@ -76,7 +56,7 @@ pub enum Token {
 impl fmt::Display for Token {
 	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
 		write!(f, "{}", match self {
-			Token::Tag(t) 			=> format!("Tag {}", t),
+			Token::Tag() 			=> format!("Tag"),
 			Token::Number(n) 			=> format!("Number {}", n),
 			Token::String(s)		=> format!("String {}", s),
 			Token::Identifier(i)	=> format!("Identifier {}", i),
