@@ -70,9 +70,6 @@ pub enum Token {
 	SemiColon,          // ;
 	DiscardVar,			// _
 	Pub,                // pub
-	Require,            // require
-	Defualt,			// defualt
-	Import,				// import
 	Export,				// export
 	Enum,				// enum
 }
@@ -118,9 +115,6 @@ impl fmt::Display for Token {
 			Token::SemiColon			=> format!("SemiColon"),
 			Token::DiscardVar			=> format!("DiscardVar"),
 			Token::Pub					=> format!("Pub"),
-			Token::Require				=> format!("Require"),
-			Token::Defualt				=> format!("Defualt"),
-			Token::Import				=> format!("Import"),
 			Token::Export				=> format!("Export"),
 			Token::Enum					=> format!("Enum"),
 		})

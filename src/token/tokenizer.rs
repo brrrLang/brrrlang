@@ -89,7 +89,7 @@ pub fn tokenize(source: &String) -> Vec<Token> {
 			line.line_char_start = line_start;
 			line.line_char_end = line_end;
 			println!("Line {:?}",line.line_text);
-			//Theard handler
+			//Thread handler
 			if num_threads < 24 {
 				tokenize_thread_handles.push(tokenizer_thread(&line, &lines, &channel_tx));
 				num_threads+=1;
@@ -102,7 +102,7 @@ pub fn tokenize(source: &String) -> Vec<Token> {
 			line_end = line_start;
 			line_num +=1;
 		} else if current_char == '/' && last_char == '/' { //One line comment
-			println!("Advoiding comment at char {}", source_loc);
+			println!("Avoiding comment at char {}", source_loc);
 			while source_loc < chars.len() && current_char != '\n' {
 				current_char = chars[source_loc];
 				source_loc+=1;
@@ -111,7 +111,7 @@ pub fn tokenize(source: &String) -> Vec<Token> {
 			actual_line_num += 1;
 			line_end = line_start;
 		} else if current_char == '/' && last_char == '*' { //Multiline comment
-			println!("\n\n\n\nAdvoiding a multiline comment");
+			println!("\n\n\n\nAvoiding a multiline comment");
 			while source_loc < chars.len() && !(last_char == '*' && current_char == '/') {
 				last_char = current_char.clone();
 				current_char = chars[source_loc];
@@ -176,7 +176,7 @@ pub fn tokenize(source: &String) -> Vec<Token> {
 	return tokens;
 }
 pub fn tokenizer_thread(line: &Line, lines_data: &Arc<Mutex<Vec<Line>>>, channel_tx: &mpsc::Sender<i32>) -> thread::JoinHandle<()> {
-	println!("\n\nTokonizer thread started");
+	println!("\n\nTokenizer thread started");
 	let lines_data = Arc::clone(lines_data);
 	let mut line_local = line.clone();
 	let channel_thread_tx = channel_tx.clone();
@@ -186,7 +186,7 @@ pub fn tokenizer_thread(line: &Line, lines_data: &Arc<Mutex<Vec<Line>>>, channel
 		let line_text: Vec<char> = line_local.line_text.clone().chars().collect();
 
 		/*
-		Splits the line into the relavent strings by operators and spaces
+		Splits the line into the relevant strings by operators and spaces
 		*/
 		let mut line_split: Vec<String> = vec!(String::new());
 		let mut line_split_pointer = 0;
@@ -201,7 +201,7 @@ pub fn tokenizer_thread(line: &Line, lines_data: &Arc<Mutex<Vec<Line>>>, channel
 			else if 
 				(line_text[i] == '=' && line_text[i+1] != '>' && line_text[i+1] != '=' && line_text[i+1] != '<') || line_text[i] == '+' || line_text[i] == '-' || line_text[i] == '*' || 
 				line_text[i] == '(' || line_text[i] == ')' || line_text[i] == '[' || line_text[i] == ']' || line_text[i] == '{' || line_text[i] == '}' || line_text[i] == ','|| line_text[i] == '.' || 
-				(line_text[i] == '<' && line_text[i+1] != '=') || (line_text[i] == '>' && line_text[i+1] != '=' || line_text[i] == ';') 
+				(line_text[i] == '<' && line_text[i+1] != '=') || (line_text[i] == '>' && line_text[i+1] != '=') || line_text[i] == ';' || (line_text[i] == '!' && line_text[i]) 
 			{
 				if line_split[line_split_pointer].len() != 0 {
 					line_split_pointer+=2;
@@ -298,25 +298,17 @@ pub fn tokenizer_thread(line: &Line, lines_data: &Arc<Mutex<Vec<Line>>>, channel
 				"}" => line_Tokens.push(Token::RCurlyBrace),
 				"[" => line_Tokens.push(Token::LSquareBrace),
 				"]" => line_Tokens.push(Token::RSquareBrace),
-				"import" => line_Tokens.push(Token::Import),
-				"require" => line_Tokens.push(Token::Require),
 				"export" => line_Tokens.push(Token::Export),
-				"defualt" => line_Tokens.push(Token::Defualt),
 				"enum" => line_Tokens.push(Token::Enum),
 				";" => line_Tokens.push(Token::SemiColon),
 				"." => line_Tokens.push(Token::Period),
 				"," => line_Tokens.push(Token::Comma),
 				 _	=> {
-					 //@ tags first
-					 if line_Tokens[i-1] == Token::Tag {
-						match stringToken.as_str() {
-							"import" => line_Tokens.push(Token::Import),
-							"require" => line_Tokens.push(Token::Require),
-							"export" => line_Tokens.push(Token::Export),
-							"defualt" => line_Tokens.push(Token::Defualt),
-							_ => println!("Eat my shiny metal ass beacuse I should error this"),
-						}
-					 }
+					//@ tags first
+					if line_Tokens[i-1] == Token::Tag {
+					line_Tokens.push(Token::Identifier(stringToken.clone()))
+					} else 
+					
 				 }
 			};
 			i+=1;
