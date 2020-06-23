@@ -1,11 +1,11 @@
 use std::fs;
 use std::io::prelude::*;
-use std::env;
 use std::process;
 use std::sync::{Arc,Mutex};
 use std::sync::mpsc::{Sender, Receiver};
 use std::sync::mpsc;
 use std::thread;
+#[allow(unused_imports)]
 use std::time::{Duration, Instant};
 use ansi_term::Colour;
 
@@ -33,20 +33,21 @@ pub fn read_file(path: &String) -> String{
 	}
 }
 
-pub fn compile_error(error: ErrorWarning) {
+pub fn tokenizer_error(error: ErrorWarning) {
 	if error.line_num == -1 {
-		println!("{} {}",Colour::Red.bold().paint(format!("\nCompilation error in process {}:", error.area_errored )),Colour::Red.paint(format!("{}",error.message)));
+		println!("{} {}",Colour::Red.bold().paint(format!("\nTokenizer error in process {}:", error.error_area )),Colour::Red.paint(format!("{}",error.message)));
 	} else {
-		println!("{} {}",Colour::Red.bold().paint(format!("\nCompilation error in process {}, line {}:", error.area_errored, error.line_num )),Colour::Red.paint(format!("{}",error.message)));
+		println!("{} {}",Colour::Red.bold().paint(format!("\nTokenizer error in process {}, line {}:", error.error_area, error.line_num )),Colour::Red.paint(format!("{}",error.message)));
 	}
-	process::exit(0);
+	if !error.continue_section {
+		process::exit(0);
+	}
 
 }
 
-pub fn tokenize(source: &String) -> Vec<Token> {
-	let mut tokens: Vec<Token> = vec!();
-	let mut lines: Arc<Mutex<Vec<Line>>> = Arc::new(Mutex::new(vec!()));
-	let chars: Vec<char> = source.chars().map( |x| match x { //Converts to Vec<char> and removes tabs and somtimes occouring \r newline
+pub fn tokenize(source: &String, cpu_thread_count: &usize) -> Vec<Line> {
+	let lines: Arc<Mutex<Vec<Line>>> = Arc::new(Mutex::new(vec!()));
+	let chars: Vec<char> = source.chars().map( |x| match x { //Converts to Vec<char> and removes tabs and sometimes occurring \r newline
 		'\t' => ' ',
 		'\r' => ' ',
 		_ => x
@@ -63,9 +64,7 @@ pub fn tokenize(source: &String) -> Vec<Token> {
 	let mut scope_id = 0;
 	let mut scope_id_chain = vec!();
 	let mut tokenize_thread_handles: Vec<thread::JoinHandle<()>> = vec!();
-
-	let max_threads = 24;
-	let mut num_threads = 0;
+	let mut num_threads: usize = 0;
 	let (channel_tx, channel_rx): (Sender<i32>, Receiver<i32>) = mpsc::channel();
 
 	while source_loc < chars.len() {
@@ -88,21 +87,20 @@ pub fn tokenize(source: &String) -> Vec<Token> {
 			line.scope_id_chain = scope_id_chain.clone();
 			line.line_char_start = line_start;
 			line.line_char_end = line_end;
-			println!("Line {:?}",line.line_text);
 			//Thread handler
-			if num_threads < 24 {
-				tokenize_thread_handles.push(tokenizer_thread(&line, &lines, &channel_tx));
+			if num_threads <= *cpu_thread_count {
+				tokenize_thread_handles.push(tokenizer_thread(&line, &lines, &channel_tx, &num_threads));
 				num_threads+=1;
 			} else {
 				channel_rx.recv().unwrap();
-				tokenize_thread_handles.push(tokenizer_thread(&line, &lines, &channel_tx));
+				tokenize_thread_handles.push(tokenizer_thread(&line, &lines, &channel_tx, &num_threads));
+				num_threads+=1;
 			}
 			// thread::sleep(Duration::from_millis(500));
 			line_start = source_loc + 1;
 			line_end = line_start;
 			line_num +=1;
 		} else if current_char == '/' && last_char == '/' { //One line comment
-			println!("Avoiding comment at char {}", source_loc);
 			while source_loc < chars.len() && current_char != '\n' {
 				current_char = chars[source_loc];
 				source_loc+=1;
@@ -110,8 +108,7 @@ pub fn tokenize(source: &String) -> Vec<Token> {
 			line_start = source_loc + 1;
 			actual_line_num += 1;
 			line_end = line_start;
-		} else if current_char == '/' && last_char == '*' { //Multiline comment
-			println!("\n\n\n\nAvoiding a multiline comment");
+		} else if current_char == '/' && last_char == '*' { //Multiline comment;
 			while source_loc < chars.len() && !(last_char == '*' && current_char == '/') {
 				last_char = current_char.clone();
 				current_char = chars[source_loc];
@@ -128,8 +125,8 @@ pub fn tokenize(source: &String) -> Vec<Token> {
 			current_char = chars[source_loc];
 			while current_char != '"' || last_char == '\\' {
 				if source_loc >= chars.len() {
-					let error = ErrorWarning::new(String::from("tokenize"),actual_line_num as i32,String::from("String was not closed"));
-					compile_error(error);
+					let error = ErrorWarning::new(String::from("tokenize"),actual_line_num as i32,String::from("String was not closed"), false);
+					tokenizer_error(error);
 				}
 				last_char = current_char.clone();
 				current_char = chars[source_loc];
@@ -144,8 +141,8 @@ pub fn tokenize(source: &String) -> Vec<Token> {
 			current_char = chars[source_loc];
 			while current_char != '\'' || last_char == '\\' {
 				if source_loc >= chars.len() {
-					let error = ErrorWarning::new(String::from("tokenize"),actual_line_num as i32,String::from("String was not closed"));
-					compile_error(error)
+					let error = ErrorWarning::new(String::from("tokenize"),actual_line_num as i32,String::from("String was not closed"), false);
+					tokenizer_error(error)
 				}
 				last_char = current_char.clone();
 				current_char = chars[source_loc];
@@ -169,19 +166,21 @@ pub fn tokenize(source: &String) -> Vec<Token> {
 		handle.join().unwrap();
 	}
 	if scope_indentation != 0 {
-		compile_error(ErrorWarning::new(String::from("tokenize"), -1, String::from("Missing closing clurly brackets")));
+		tokenizer_error(ErrorWarning::new(String::from("tokenize"), -1, String::from("Missing closing curly brackets"), false));
 	}
 
-	println!("Lines = {:#?}",lines);
-	return tokens;
+	//println!("Lines = {:#?}",lines);
+	let lines = Arc::clone(&lines);
+	return lines.lock().unwrap().clone();
 }
-pub fn tokenizer_thread(line: &Line, lines_data: &Arc<Mutex<Vec<Line>>>, channel_tx: &mpsc::Sender<i32>) -> thread::JoinHandle<()> {
-	println!("\n\nTokenizer thread started");
+pub fn tokenizer_thread(line: &Line, lines_data: &Arc<Mutex<Vec<Line>>>, channel_tx: &mpsc::Sender<i32>, num_threads: &usize) -> thread::JoinHandle<()> {
+	println!("\n {:?} Tokenizer thread started", num_threads);
 	let lines_data = Arc::clone(lines_data);
 	let mut line_local = line.clone();
 	let channel_thread_tx = channel_tx.clone();
-	let handle = thread::spawn(move || {
-		let mut tokens: Vec<Token> = vec!();
+	let thread_builder = thread::Builder::new()
+							.name(num_threads.to_string().into());
+	let handle = thread_builder.spawn(move || {
 		// println!("Line text: {}", line_local.line_text);
 		let line_text: Vec<char> = line_local.line_text.clone().chars().collect();
 
@@ -201,7 +200,7 @@ pub fn tokenizer_thread(line: &Line, lines_data: &Arc<Mutex<Vec<Line>>>, channel
 			else if 
 				(line_text[i] == '=' && line_text[i+1] != '>' && line_text[i+1] != '=' && line_text[i+1] != '<') || line_text[i] == '+' || line_text[i] == '-' || line_text[i] == '*' || 
 				line_text[i] == '(' || line_text[i] == ')' || line_text[i] == '[' || line_text[i] == ']' || line_text[i] == '{' || line_text[i] == '}' || line_text[i] == ','|| line_text[i] == '.' || 
-				(line_text[i] == '<' && line_text[i+1] != '=') || (line_text[i] == '>' && line_text[i+1] != '=') || line_text[i] == ';' || (line_text[i] == '!' && line_text[i]) 
+				(line_text[i] == '<' && line_text[i+1] != '=') || (line_text[i] == '>' && line_text[i+1] != '=') || line_text[i] == ';' || (line_text[i] == '!' && line_text[i+1] != '=')
 			{
 				if line_split[line_split_pointer].len() != 0 {
 					line_split_pointer+=2;
@@ -250,7 +249,7 @@ pub fn tokenizer_thread(line: &Line, lines_data: &Arc<Mutex<Vec<Line>>>, channel
 					i+=1;
 				}
 				line_split_pointer+=1;
-			} else if line_text[i] == '\'' { //and you can't have amberguity between string decluration symbols
+			} else if line_text[i] == '\'' { //and you can't have ambiguity between string declaration symbols
 				line_split[line_split_pointer].push(line_text[i]);
 				i+=1;
 				while line_text[i] != '\'' && line_text[i-1] != '\\' {
@@ -278,62 +277,113 @@ pub fn tokenizer_thread(line: &Line, lines_data: &Arc<Mutex<Vec<Line>>>, channel
 				line_split_pointer+=1;
 			}
 		}
-		println!("Lines split from: {:?} to: {:?}",line_local.line_text,line_split);
 		line_local.line_split = line_split.clone();
 		/*
 		Matches the keywords using context
 		*/
 		i = 0;
-		let mut stringToken: String;
-		let mut currentToken: Token;
-		let mut line_Tokens: Vec<Token> = vec!();
+		let mut string_token: String;
+		let mut char_token: Vec<char>;
+		let mut line_tokens: Vec<Token> = vec!();
 		while i < line_split.len() {
-			stringToken = line_split[i].clone();
-			// Check if keyword line_Tokens.push()
-			match stringToken.as_str() {
-				"@" => line_Tokens.push(Token::Tag),
-				"(" => line_Tokens.push(Token::LBrace),
-				")" => line_Tokens.push(Token::RBrace),
-				"{" => line_Tokens.push(Token::LCurlyBrace),
-				"}" => line_Tokens.push(Token::RCurlyBrace),
-				"[" => line_Tokens.push(Token::LSquareBrace),
-				"]" => line_Tokens.push(Token::RSquareBrace),
-				"export" => line_Tokens.push(Token::Export),
-				"enum" => line_Tokens.push(Token::Enum),
-				";" => line_Tokens.push(Token::SemiColon),
-				"." => line_Tokens.push(Token::Period),
-				"," => line_Tokens.push(Token::Comma),
+			string_token = line_split[i].clone();
+			// Check if keyword line_tokens.push()
+			match string_token.as_str() {
+				"@" => line_tokens.push(Token::Tag),
+				"(" => line_tokens.push(Token::LBrace),
+				")" => line_tokens.push(Token::RBrace),
+				"{" => line_tokens.push(Token::LCurlyBrace),
+				"}" => line_tokens.push(Token::RCurlyBrace),
+				"[" => line_tokens.push(Token::LSquareBrace),
+				"]" => line_tokens.push(Token::RSquareBrace),
+				"export" => line_tokens.push(Token::Export),
+				"enum" => line_tokens.push(Token::Enum),
+				";" => line_tokens.push(Token::SemiColon),
+				"." => line_tokens.push(Token::Period),
+				"," => line_tokens.push(Token::Comma),
+				"while" => line_tokens.push(Token::Comma),
+				"for" => line_tokens.push(Token::Comma),
+				"until" => line_tokens.push(Token::Comma),
+				"if" => line_tokens.push(Token::Comma),
+				"else" => line_tokens.push(Token::Comma),
+				"_" => line_tokens.push(Token::DiscardVar),
+				"::" => line_tokens.push(Token::ScopeResolution),
+				"=" => line_tokens.push(Token::Assignment),
+				"!" => line_tokens.push(Token::ExclamationMark),
+				"*" => line_tokens.push(Token::Star),
+				"==" => line_tokens.push(Token::LogicalEqual),
+				"!=" => line_tokens.push(Token::LogicalNotEqual),
+				"<=" => line_tokens.push(Token::LessThanOrEqual),
+				">=" => line_tokens.push(Token::MoreThanOrEqual),
+				"<" => line_tokens.push(Token::LessThan),
+				">" => line_tokens.push(Token::MoreThan),
+				"+=" => line_tokens.push(Token::PlusEqual),
+				"-=" => line_tokens.push(Token::MinusEqual),
+				"++" => line_tokens.push(Token::PlusPlus),
+				"pub" => line_tokens.push(Token::Pub),
+				"true" => line_tokens.push(Token::LogicalTrue),
+				"false" => line_tokens.push(Token::LogicalFalse),
+				"raise" => line_tokens.push(Token::Raise),
+				"await" => line_tokens.push(Token::Await),
+				"default" => line_tokens.push(Token::DefaultKeyword),
+				":" => line_tokens.push(Token::Colon),
+				"let" => line_tokens.push(Token::Let),
+				"" => (),
 				 _	=> {
-					//@ tags first
-					if line_Tokens[i-1] == Token::Tag {
-					line_Tokens.push(Token::Identifier(stringToken.clone()))
-					} else 
+					char_token = string_token.chars().collect();
+					if line_tokens.len() != 0 && line_tokens[line_tokens.len()-1] == Token::Tag { //@ tags first means identifer next
+						line_tokens.push(Token::Identifier(string_token.clone()))
+					} else if char_token[0] == '"' || char_token[0] == '\''{ //String
+						char_token.remove(0);
+						char_token.pop();
+						line_tokens.push(Token::String(char_token.iter().collect()));
+					} else if char_token[0].is_digit(10) { //Number
+						if string_token.contains('.') { //Float
+							match string_token.parse::<f32>() {
+								Ok(val) => line_tokens.push(Token::Float(val)),
+								Err(why) => tokenizer_error(ErrorWarning::new (
+									String::from("Float parsing"), line_local.actual_line_num as i32, format!("Invalid float {} Error: {}",string_token,why), true
+								))
+							}
+						} else { //Int
+							match string_token.parse::<i32>() {
+								Ok(val) => line_tokens.push(Token::Int(val)),
+								Err(why) => tokenizer_error(ErrorWarning::new (
+									String::from("Int parsing"), line_local.actual_line_num as i32, format!("Invalid int {} Error: {}",string_token,why), true
+								))
+							}
+						}
+					} else { //Must be a variable
+						line_tokens.push(Token::Identifier(string_token));
+					}
 					
 				 }
 			};
 			i+=1;
 		}
-		//Everything should be done by now | Save shit in multex that can't be poisend
-		line_local.line_token = tokens;
+		//Everything should be done by now | Save shit in mutex that can't be poisoned
+		line_local.line_token = line_tokens;
 		let mut mutex_lines_data = lines_data.lock().unwrap();
 		while mutex_lines_data.len() <= line_local.line_num { mutex_lines_data.push(Line::new())}
 		mutex_lines_data[line_local.line_num] = line_local.clone();
 		channel_thread_tx.send(0).unwrap();
-	});
+	}).unwrap();
 	return handle;
 }
 
 pub struct ErrorWarning {
-	area_errored: String,
+	error_area: String,
 	line_num: i32,
-	message: String
+	message: String,
+	continue_section: bool,
 }
 impl ErrorWarning {
-	pub fn new(area_errored: String, line_num: i32, message: String) -> ErrorWarning {
+	pub fn new(error_area: String, line_num: i32, message: String, continue_section: bool) -> ErrorWarning {
 		return ErrorWarning {
-			area_errored: area_errored,
+			error_area: error_area,
 			line_num: line_num,
-			message: message
+			message: message,
+			continue_section: continue_section
 		}
 	}
 }

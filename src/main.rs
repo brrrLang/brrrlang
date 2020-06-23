@@ -1,5 +1,6 @@
 #[macro_use] extern crate dyn_clone;
 extern crate ansi_term;
+extern crate num_cpus;
 
 use std::time::Instant;
 use std::{env, process};
@@ -15,8 +16,9 @@ fn main() {
         eprintln!("Error, expected at least 1 arguments, got none");
         process::exit(0x1);
     }
+    let cpu_thread_count = num_cpus::get();
     let file = token::tokenizer::read_file(&args[1]);
-    let _tokens = token::tokenizer::tokenize(&file);
+    let _tokens = token::tokenizer::tokenize(&file,&cpu_thread_count);
     let elapsed = start_time.elapsed();
     println!("\nTime taken: {:.5?}", elapsed);
 }

@@ -2,7 +2,7 @@ use std::fmt;
 pub mod tokenizer;
 
 #[derive(Clone, Debug)]
-pub struct Line { //Holder obj with relevent info about each instructions
+pub struct Line { //Holder obj with relevant info about each instructions
 pub line_text: String,
 	pub line_token: Vec<Token>,
 	pub line_split: Vec<String>,
@@ -33,13 +33,14 @@ impl Line {
 #[derive(Clone, Debug, PartialEq)]
 pub enum Token {
 	Tag,           		// @
-	Number(i32),        // [0-9]+
+	Int(i32),        	// [0-9]+
+	Float(f32),			// [0-9]+.[0-9]+
 	String(String),     // ""
 	Identifier(String), // a-zA-Z[a-zA-Z_0-9]+
-	Let(String),        // let
-	Raise(String),      // raise
-	Await(i32),         // await
+	Raise,      		// raise
+	Await,		        // await
 	Bool(bool),			// True, False
+	Let ,       		// let
 	LBrace,             // (
 	RBrace,             // )
 	LCurlyBrace,        // {
@@ -51,6 +52,8 @@ pub enum Token {
 	LogicalNotEqual,	// !=
 	LogicalAnd,			// &&
 	LogicalOr,			// ||
+	LogicalTrue,		// true
+	LogicalFalse,		// false
 	LessThan,			// <
 	MoreThan,			// >
 	LessThanOrEqual,	// <=
@@ -66,24 +69,34 @@ pub enum Token {
 	Comma,              // ,
 	Star,               // *
 	ScopeResolution,    // ::
+	Colon,				// :
 	Assignment,         // =
 	SemiColon,          // ;
 	DiscardVar,			// _
 	Pub,                // pub
 	Export,				// export
 	Enum,				// enum
+	While,				// while
+	For,				// for
+	Loop,				// loop
+	If,					// if
+	Else,				// else
+	Until,				// until
+	DefaultKeyword,		// default
+	
 }
 
 impl fmt::Display for Token {
 	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
 		write!(f, "{}", match self {
 			Token::Tag			 		=> format!("Tag"),
-			Token::Number(n) 			=> format!("Number {}", n),
+			Token::Int(n) 				=> format!("Int {}", n),
+			Token::Float(n) 			=> format!("Float {}", n),
 			Token::String(s)			=> format!("String {}", s),
 			Token::Identifier(i)		=> format!("Identifier {}", i),
-			Token::Let(n)				=> format!("Let {}", n),
-			Token::Raise(e)				=> format!("Raise {}", e),
-			Token::Await(a)				=> format!("Await {}", a),
+			Token::Let					=> format!("Let"),
+			Token::Raise				=> format!("Raise"),
+			Token::Await				=> format!("Await"),
 			Token::Bool(b)				=> format!("Bool {}", b),
 			Token::LBrace				=> format!("LBrace"),
 			Token::RBrace				=> format!("RBrace"),
@@ -96,6 +109,8 @@ impl fmt::Display for Token {
 			Token::LogicalNotEqual		=> format!("LogicalNotEqual"),
 			Token::LogicalAnd			=> format!("LogicalAnd"),
 			Token::LogicalOr			=> format!("LogicalOr"),
+			Token::LogicalTrue			=> format!("LogicalTrue"),
+			Token::LogicalFalse			=> format!("LogicalFalse"),
 			Token::LessThan				=> format!("LessThan"),
 			Token::MoreThan				=> format!("MoreThan"),
 			Token::LessThanOrEqual		=> format!("LessThanOrEqual"),
@@ -117,6 +132,14 @@ impl fmt::Display for Token {
 			Token::Pub					=> format!("Pub"),
 			Token::Export				=> format!("Export"),
 			Token::Enum					=> format!("Enum"),
+			Token::While				=> format!("While"),
+			Token::For					=> format!("For"),
+			Token::Loop					=> format!("Loop"),
+			Token::If					=> format!("If"),
+			Token::Else					=> format!("Else"),
+			Token::Until				=> format!("Until"),
+			Token::Colon				=> format!("Colon"),
+			Token::DefaultKeyword		=> format!("Default"),
 		})
 	}
 }
