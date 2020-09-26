@@ -1,7 +1,7 @@
-# Spruce-lang
-Spruce-lang is a language based on events, there are no function calls.
-## Hello world in Spruce-lang
-```spruce
+# BrrLang
+BrrLang is a language based on events, there are no function calls.
+## Hello world in BrrLang
+```brrlang
 @export std::StartEvent:100 default;
 
 @import 'std';
@@ -18,7 +18,7 @@ Heres how it works
 - `@import` tags import a specific module into the current module, in the case of this example, the std module. This will also auto-require any other sub-modules of 
 the module that have been outline in the mod.spruce
 - `@require` This imports a submodule of an already imported module or submodule into the current module.
-- `@EventHandler ehid = 100, e = std::StartEvent` is the main method of your spruce application. It is a EventHandler for the StartEvent, so everytime a StartEvent 
+- `@EventHandler ehid = 100, e = std::StartEvent` is the main method of your BrrLang application. It is a EventHandler for the StartEvent, so everytime a StartEvent 
 is 
 raised, once the runtime hase been initlised, the StartEvent is raised and this EventHandler is called asyncouriously.
 - `raise std::io::PrintLnEvent("Hello world");` This line raises the std::io::PrintLnEvent event with the arguments of "Hello world". This causes all the EventHandlers for 
@@ -31,26 +31,26 @@ default event handler. In this exapmle the runtime raises StartEvent, then await
 
 ## Vaiables 
 Variables are mutable by default, they are staticaly typed. You use the let keyword to define them. eg:
-```spruce
+```brrlang
 let a = 0;
 ```
 This will create a int_32 with the value 0;
 
 ### Constants
 Constants are like variables with immuatable values.
-```spruce
+```brrlang
 let const a = 0;
 ```
 
 ### Manulay defining types
 You can manualy define the type of a variable using the : operator
-```spruce
+```brrlang
 let a: int_32;
 ```
 This will create an unitilized int_32
 
 With number primitives, you can define their type using putting the type after the number
-```spruce
+```brrlang
 let a = 16uint_8;
 ```
 
@@ -60,7 +60,7 @@ asyncourously. One event can have many attached handlers, all are called when an
 
 ### Creating an event
 Befor you can create event handlers, you first have to create the event. This can be done like so:
-```spruce
+```brrlang
 @Event
 class FooEvent {
     pub require {
@@ -82,7 +82,7 @@ The `pub` block is just public members
 
 ### Creating an event handler
 Now that we have an event that we can raise, we can create an event handler that will be called when the event is raised
-```spruce
+```brrlang
 @EventHandler ehid = 100, e = FooEvent {
     e.result = number1 * number2;
     raise e.FinnishEvent() await default;
@@ -97,7 +97,7 @@ Any time you want to access infomation from the event inside an event handler, u
 To use this event, you simpaly raise Foo, this will asyncoursouly call all the event handler registered to the event Foo, like the one we just created. Heres how we 
 would use it:
 
-```spruce
+```brrlang
 raise FooEvent(1, 100);
 ```
 
@@ -105,14 +105,14 @@ Now Foo still has some data stored in it that we want to retrieve, the result me
 the Foo event. To do this, we await an event handler. When using an await, you must specify the ehid of the handler that you want to get the data from. The evntent 
 handler that you have specified will be called asyncourously while all other handlers will still be called asyncoursouly. This will return the event object from 
 that event handler that you have specified. Using the Foo event and handler that we have just created, here is how you get the information out.
-```
+```brrlang
 let multiply = raise FooEvent(50, 10) await 100.result;
 ```
 This will create a variable with the value of e.result from the event handler with the ehid of 100, so in this case, it will have the value of 500.
 
 Here is an expample using all of this together;
 
-```spruce
+```brrlang
 @export std::StartEvent:100 default;
 
 @import 'std';
@@ -145,7 +145,7 @@ class FooEvent {
 
 Events are also objects so you can store them like a so
 
-```spruce
+```brrlang
 @import 'std';
 @require std::io;
 
