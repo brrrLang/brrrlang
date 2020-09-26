@@ -83,6 +83,9 @@ pub enum Token {
 	Else,				// else
 	Until,				// until
 	DefaultKeyword,		// default
+	Import,				// import
+	Require,			// require
+	EventHandler,		// EventHandler
 	
 }
 
@@ -131,6 +134,8 @@ impl fmt::Display for Token {
 			Token::DiscardVar			=> format!("DiscardVar"),
 			Token::Pub					=> format!("Pub"),
 			Token::Export				=> format!("Export"),
+			Token::Import				=> format!("Import"),
+			Token::Require				=> format!("Require"),
 			Token::Enum					=> format!("Enum"),
 			Token::While				=> format!("While"),
 			Token::For					=> format!("For"),
@@ -140,6 +145,7 @@ impl fmt::Display for Token {
 			Token::Until				=> format!("Until"),
 			Token::Colon				=> format!("Colon"),
 			Token::DefaultKeyword		=> format!("Default"),
+			Token::EventHandler			=> format!("EventHandler"),
 		})
 	}
 }

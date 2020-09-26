@@ -301,7 +301,6 @@ pub fn tokenizer_thread(line: &Line, lines_data: &Arc<Mutex<Vec<Line>>>, channel
 				"}" => line_tokens.push(Token::RCurlyBrace),
 				"[" => line_tokens.push(Token::LSquareBrace),
 				"]" => line_tokens.push(Token::RSquareBrace),
-				"export" => line_tokens.push(Token::Export),
 				"enum" => line_tokens.push(Token::Enum),
 				";" => line_tokens.push(Token::SemiColon),
 				"." => line_tokens.push(Token::Period),
@@ -337,7 +336,16 @@ pub fn tokenizer_thread(line: &Line, lines_data: &Arc<Mutex<Vec<Line>>>, channel
 				 _	=> {
 					char_token = string_token.chars().collect();
 					if line_tokens.len() != 0 && line_tokens[line_tokens.len()-1] == Token::Tag { //@ tags first means identifer next
-						line_tokens.push(Token::Identifier(string_token.clone()))
+						match string_token.as_str(){
+							"export" => line_tokens.push(Token::Export),
+							"import" => line_tokens.push(Token::Export),
+							"require" => line_tokens.push(Token::Require),
+							"EventHandler" => line_tokens.push(Token::EventHandler),
+							_ => tokenizer_error(ErrorWarning::new(
+								String::from("Float parsing"), line_local.actual_line_num as i32, format!("Invalid Tag {}",string_token), false
+							))
+						}
+						
 					} else if char_token[0] == '"' || char_token[0] == '\''{ //String
 						char_token.remove(0);
 						char_token.pop();
