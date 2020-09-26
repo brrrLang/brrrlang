@@ -8,6 +8,7 @@ use std::{env, process};
 pub mod token;
 pub mod syntax_tree;
 pub mod tree;
+pub mod source_finder;
 
 fn main() {
     let start_time = Instant::now();
@@ -16,9 +17,10 @@ fn main() {
         eprintln!("Error, expected at least 1 arguments, got none");
         process::exit(0x1);
     }
+    let initial_file_path = args[1].clone();
     let cpu_thread_count = num_cpus::get();
-    let file = token::tokenizer::read_file(&args[1]);
-    let _tokens = token::tokenizer::tokenize(&file,&cpu_thread_count);
+    let mut all_parsed_tokens: Vec<Vec<token::Line>> = vec!();
+    source_finder::main::recursively_find_imports(&mut all_parsed_tokens,&cpu_thread_count,&initial_file_path);
     let elapsed = start_time.elapsed();
     println!("\nTime taken: {:.5?}", elapsed);
 }

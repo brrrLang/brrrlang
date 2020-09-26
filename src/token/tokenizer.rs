@@ -11,6 +11,12 @@ use ansi_term::Colour;
 
 use crate::token::*;
 
+pub fn parse_file(file_name: &String,cpu_thread_count: &usize) -> Vec<Line> {
+	let file = read_file(&file_name);
+	let _tokens = tokenize(&file,&cpu_thread_count);
+	return _tokens;
+}
+
 pub fn read_file(path: &String) -> String{
 	// Open the file
 	let file = fs::OpenOptions::new().read(true).open(path);
@@ -174,7 +180,6 @@ pub fn tokenize(source: &String, cpu_thread_count: &usize) -> Vec<Line> {
 	return lines.lock().unwrap().clone();
 }
 pub fn tokenizer_thread(line: &Line, lines_data: &Arc<Mutex<Vec<Line>>>, channel_tx: &mpsc::Sender<i32>, num_threads: &usize) -> thread::JoinHandle<()> {
-	println!("\n {:?} Tokenizer thread started", num_threads);
 	let lines_data = Arc::clone(lines_data);
 	let mut line_local = line.clone();
 	let channel_thread_tx = channel_tx.clone();
