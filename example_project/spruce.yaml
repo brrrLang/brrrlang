@@ -1,0 +1,4 @@
+project:
+  name: "ExampleProject"
+  version: "1.0.0"
+  proj_root: ""src/main.spruce"
