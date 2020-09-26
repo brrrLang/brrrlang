@@ -80,7 +80,7 @@ class ReadFileEvent {
 
 // ! means the following member/trait can be either of these types
 
-@Eventhandler ehid = 100, e = ReadFileEvent {
+@EventHandler ehid = 100, e = ReadFileEvent {
     // Open the file
     let file = raise std::io::fs::File::OpenFileEvent(file) await "r".file;
     

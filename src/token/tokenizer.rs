@@ -78,7 +78,12 @@ pub fn tokenize(source: &String, cpu_thread_count: &usize) -> Vec<Line> {
 		current_char = chars[source_loc];
 		if current_char == ';'  || current_char == '{' || current_char == '}' {
 			line = Line::new();
-			line.line_text = String::from(chars[line_start..line_end+1].iter().collect::<String>().trim());
+			line.line_text = String::from(
+				chars[
+					line_start..{line_end+ if current_char != ';' {1} else {0}}
+					]
+					.iter().collect::<String>().trim()
+			);
 			if current_char == '{' {
 				scope_indentation+=1;
 				scope_id+=1;
@@ -180,6 +185,7 @@ pub fn tokenize(source: &String, cpu_thread_count: &usize) -> Vec<Line> {
 	return lines.lock().unwrap().clone();
 }
 pub fn tokenizer_thread(line: &Line, lines_data: &Arc<Mutex<Vec<Line>>>, channel_tx: &mpsc::Sender<i32>, num_threads: &usize) -> thread::JoinHandle<()> {
+	// println!("\n {:?} Tokenizer thread started", num_threads);
 	let lines_data = Arc::clone(lines_data);
 	let mut line_local = line.clone();
 	let channel_thread_tx = channel_tx.clone();
@@ -302,7 +308,7 @@ pub fn tokenizer_thread(line: &Line, lines_data: &Arc<Mutex<Vec<Line>>>, channel
 				"[" => line_tokens.push(Token::LSquareBrace),
 				"]" => line_tokens.push(Token::RSquareBrace),
 				"enum" => line_tokens.push(Token::Enum),
-				";" => line_tokens.push(Token::SemiColon),
+				";" => {},
 				"." => line_tokens.push(Token::Period),
 				"," => line_tokens.push(Token::Comma),
 				"while" => line_tokens.push(Token::Comma),
@@ -338,13 +344,18 @@ pub fn tokenizer_thread(line: &Line, lines_data: &Arc<Mutex<Vec<Line>>>, channel
 					if line_tokens.len() != 0 && line_tokens[line_tokens.len()-1] == Token::Tag { //@ tags first means identifer next
 						match string_token.as_str(){
 							"export" => line_tokens.push(Token::Export),
-							"import" => line_tokens.push(Token::Export),
+							"import" => line_tokens.push(Token::Import),
 							"require" => line_tokens.push(Token::Require),
+							"Event" => line_tokens.push(Token::Event),
 							"EventHandler" => line_tokens.push(Token::EventHandler),
 							_ => tokenizer_error(ErrorWarning::new(
-								String::from("Float parsing"), line_local.actual_line_num as i32, format!("Invalid Tag {}",string_token), false
+								String::from("Tag matching"), line_local.actual_line_num as i32, format!("Invalid tag: {}",string_token), false
 							))
 						}
+						line_tokens.push(Token::Identifier(
+							line_split[i+1..].iter().map(|s| &**s)
+							.collect::<String>()
+						));
 						
 					} else if char_token[0] == '"' || char_token[0] == '\''{ //String
 						char_token.remove(0);

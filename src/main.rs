@@ -22,6 +22,6 @@ fn main() {
     let mut all_parsed_tokens: Vec<Vec<token::Line>> = vec!();
     source_finder::main::recursively_find_imports(&mut all_parsed_tokens,&cpu_thread_count,&initial_file_path);
     let elapsed = start_time.elapsed();
-    println!("Tokens: {:?}",all_parsed_tokens);
+    println!("Files imported: {:?}",all_parsed_tokens.len());
     println!("\nTime taken: {:.5?}", elapsed);
 }
