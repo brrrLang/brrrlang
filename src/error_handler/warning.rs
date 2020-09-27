@@ -11,7 +11,20 @@ pub fn warning_reporter(warning: Warning) {
 		STYLE.paint(format!(": {}",warning.message)
 	));
 	if warning.line_num != -1 {
-		println!("{}{}",STYLE.paint(format!("Line {} --> ",warning.line_num)),Colour::White.italic().paint(warning.line_text));
+		println!(
+			"{}{}",
+			STYLE.paint(format!(
+				"Line {} {}",
+				warning.line_num,
+				if warning.line_text != String::new() {
+					String::from("")
+				}
+				else {
+					String::new()
+				}
+			)),
+			Colour::White.italic().paint(warning.line_text)
+		);
 	}
 	println!();
 }

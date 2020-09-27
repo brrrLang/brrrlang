@@ -3,14 +3,30 @@ use std::process;
 
 use crate::error_handler::*;
 
+const STYLE: Colour = Colour::Red;
+
 pub fn error_reporter(error: Error) {
-	let mut error_text = format!("\n{} error", error.error_area );
+	println!(
+		"{}{}",
+		STYLE.bold().paint(format!("\n{} error", error.error_area)),
+		STYLE.paint(format!(": {}",error.message)
+	));
 	if error.line_num != -1 {
-		error_text = format!("{}, line {}", error_text, error.line_num);
+		println!(
+			"{}{}",
+			STYLE.paint(format!(
+				"Line {} {}",
+				error.line_num,
+				if error.line_text != String::new() {
+					String::from("--> ")
+				}
+				else {
+					String::new()
+				}
+			)),
+			Colour::White.italic().paint(error.line_text)
+		);
 	}
-	println!("{}{}",Colour::Red.bold().paint(error_text),Colour::Red.paint(format!(": {}",error.message)));
-	if error.line_text != String::new() {
-		println!("{}",Colour::Red.italic().paint(error.line_text));
-	}
+	println!();
 	process::exit(1);
 }
