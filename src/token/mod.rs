@@ -87,6 +87,7 @@ pub enum Token {
 	Require,			// require
 	EventHandler,		// EventHandler
 	Event,				// Event
+	Use,				// use
 	
 }
 
@@ -148,6 +149,7 @@ impl fmt::Display for Token {
 			Token::DefaultKeyword		=> format!("Default"),
 			Token::EventHandler			=> format!("EventHandler"),
 			Token::Event				=> format!("Event"),
+			Token::Use					=> format!("Use")
 		})
 	}
 }

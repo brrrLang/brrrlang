@@ -7,9 +7,9 @@ use std::sync::mpsc;
 use std::thread;
 #[allow(unused_imports)]
 use std::time::{Duration, Instant};
-use ansi_term::Colour;
 
 use crate::token::*;
+use crate::error_handler;
 
 pub fn parse_file(file_name: &String,cpu_thread_count: &usize) -> Vec<Line> {
 	let file = read_file(&file_name);
@@ -39,17 +39,7 @@ pub fn read_file(path: &String) -> String{
 	}
 }
 
-pub fn tokenizer_error(error: ErrorWarning) {
-	if error.line_num == -1 {
-		println!("{} {}",Colour::Red.bold().paint(format!("\nTokenizer error in process {}:", error.error_area )),Colour::Red.paint(format!("{}",error.message)));
-	} else {
-		println!("{} {}",Colour::Red.bold().paint(format!("\nTokenizer error in process {}, line {}:", error.error_area, error.line_num )),Colour::Red.paint(format!("{}",error.message)));
-	}
-	if !error.continue_section {
-		process::exit(0);
-	}
 
-}
 
 pub fn tokenize(source: &String, cpu_thread_count: &usize) -> Vec<Line> {
 	let lines: Arc<Mutex<Vec<Line>>> = Arc::new(Mutex::new(vec!()));
@@ -116,9 +106,9 @@ pub fn tokenize(source: &String, cpu_thread_count: &usize) -> Vec<Line> {
 				current_char = chars[source_loc];
 				source_loc+=1;
 			}
-			line_start = source_loc + 1;
+			line_start = source_loc;
 			actual_line_num += 1;
-			line_end = line_start;
+			line_end = line_start+1;
 		} else if current_char == '/' && last_char == '*' { //Multiline comment;
 			while source_loc < chars.len() && !(last_char == '*' && current_char == '/') {
 				last_char = current_char.clone();
@@ -136,8 +126,8 @@ pub fn tokenize(source: &String, cpu_thread_count: &usize) -> Vec<Line> {
 			current_char = chars[source_loc];
 			while current_char != '"' || last_char == '\\' {
 				if source_loc >= chars.len() {
-					let error = ErrorWarning::new(String::from("tokenize"),actual_line_num as i32,String::from("String was not closed"), false);
-					tokenizer_error(error);
+					let error = error_handler::Error::new(String::from("tokenize"),actual_line_num as i32,String::from("String was not closed"),String::new());
+					error_handler::error::error_reporter(error);
 				}
 				last_char = current_char.clone();
 				current_char = chars[source_loc];
@@ -152,8 +142,8 @@ pub fn tokenize(source: &String, cpu_thread_count: &usize) -> Vec<Line> {
 			current_char = chars[source_loc];
 			while current_char != '\'' || last_char == '\\' {
 				if source_loc >= chars.len() {
-					let error = ErrorWarning::new(String::from("tokenize"),actual_line_num as i32,String::from("String was not closed"), false);
-					tokenizer_error(error)
+					let error = error_handler::Error::new(String::from("tokenize"),actual_line_num as i32,String::from("String was not closed"),String::new());
+					error_handler::error::error_reporter(error)
 				}
 				last_char = current_char.clone();
 				current_char = chars[source_loc];
@@ -177,7 +167,9 @@ pub fn tokenize(source: &String, cpu_thread_count: &usize) -> Vec<Line> {
 		handle.join().unwrap();
 	}
 	if scope_indentation != 0 {
-		tokenizer_error(ErrorWarning::new(String::from("tokenize"), -1, String::from("Missing closing curly brackets"), false));
+		error_handler::error::error_reporter(
+			error_handler::Error::new(String::from("tokenize"), -1, String::from("Missing closing curly brackets"),String::new())
+		);
 	}
 
 	//println!("Lines = {:#?}",lines);
@@ -348,14 +340,16 @@ pub fn tokenizer_thread(line: &Line, lines_data: &Arc<Mutex<Vec<Line>>>, channel
 							"require" => line_tokens.push(Token::Require),
 							"Event" => line_tokens.push(Token::Event),
 							"EventHandler" => line_tokens.push(Token::EventHandler),
-							_ => tokenizer_error(ErrorWarning::new(
-								String::from("Tag matching"), line_local.actual_line_num as i32, format!("Invalid tag: {}",string_token), false
+							"use" => line_tokens.push(Token::Use),
+							_ => error_handler::error::error_reporter(error_handler::Error::new(
+								String::from("Tag matching"), line_local.actual_line_num as i32, format!("Invalid tag: {}",string_token), line_text.iter().collect()
 							))
 						}
-						line_tokens.push(Token::Identifier(
-							line_split[i+1..].iter().map(|s| &**s)
-							.collect::<String>()
-						));
+						let mut file_path = String::new();
+							for token in line_split[i+1..].iter() {
+								file_path = [file_path, token.clone()].concat();
+							}
+						line_tokens.push(Token::Identifier(file_path));
 						
 					} else if char_token[0] == '"' || char_token[0] == '\''{ //String
 						char_token.remove(0);
@@ -365,15 +359,15 @@ pub fn tokenizer_thread(line: &Line, lines_data: &Arc<Mutex<Vec<Line>>>, channel
 						if string_token.contains('.') { //Float
 							match string_token.parse::<f32>() {
 								Ok(val) => line_tokens.push(Token::Float(val)),
-								Err(why) => tokenizer_error(ErrorWarning::new (
-									String::from("Float parsing"), line_local.actual_line_num as i32, format!("Invalid float {} Error: {}",string_token,why), true
+								Err(why) => error_handler::error::error_reporter(error_handler::Error::new (
+									String::from("Float parsing"), line_local.actual_line_num as i32, format!("Invalid float {} Error: {}",string_token,why), line_text.iter().collect()
 								))
 							}
 						} else { //Int
 							match string_token.parse::<i32>() {
 								Ok(val) => line_tokens.push(Token::Int(val)),
-								Err(why) => tokenizer_error(ErrorWarning::new (
-									String::from("Int parsing"), line_local.actual_line_num as i32, format!("Invalid int {} Error: {}",string_token,why), true
+								Err(why) => error_handler::error::error_reporter(error_handler::Error::new (
+									String::from("Int parsing"), line_local.actual_line_num as i32, format!("Invalid int {} Error: {}",string_token,why), line_text.iter().collect()
 								))
 							}
 						}
@@ -393,21 +387,4 @@ pub fn tokenizer_thread(line: &Line, lines_data: &Arc<Mutex<Vec<Line>>>, channel
 		channel_thread_tx.send(0).unwrap();
 	}).unwrap();
 	return handle;
-}
-
-pub struct ErrorWarning {
-	error_area: String,
-	line_num: i32,
-	message: String,
-	continue_section: bool,
-}
-impl ErrorWarning {
-	pub fn new(error_area: String, line_num: i32, message: String, continue_section: bool) -> ErrorWarning {
-		return ErrorWarning {
-			error_area: error_area,
-			line_num: line_num,
-			message: message,
-			continue_section: continue_section
-		}
-	}
 }

@@ -4,7 +4,7 @@
 @export ParseEvent:200 'csv';
 
 // Importing all the required libraries
-@import 'std';
+@use 'std';
 @require std::io;
 @require std::io::fs;
 @require std::string;

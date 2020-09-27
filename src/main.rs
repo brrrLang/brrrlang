@@ -9,6 +9,7 @@ pub mod token;
 pub mod syntax_tree;
 pub mod tree;
 pub mod import_manager;
+pub mod error_handler;
 
 fn main() {
     let start_time = Instant::now();
