@@ -1,0 +1,9 @@
+[[project]]
+  name = "ExampleProject"
+  version = "1.0.0"
+  root = "src/main.bl"
+
+[[project]]
+name = "ExampleProject"
+version = "1.0.0"
+root = "cock_sucker/main.bl"
