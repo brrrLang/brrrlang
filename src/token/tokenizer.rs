@@ -11,9 +11,9 @@ use std::time::{Duration, Instant};
 use crate::token::*;
 use crate::error_handler;
 
-pub fn parse_file(file_name: &String,cpu_thread_count: &usize) -> Vec<Line> {
+pub fn parse_file(file_name: &String,cpu_thread_count: &usize, scope_id_start_pos: &i32) -> Vec<Line> {
 	let file = read_file(&file_name);
-	let _tokens = tokenize(&file,&cpu_thread_count);
+	let _tokens = tokenize(&file,&cpu_thread_count,scope_id_start_pos);
 	return _tokens;
 }
 
@@ -41,7 +41,7 @@ pub fn read_file(path: &String) -> String{
 
 
 
-pub fn tokenize(source: &String, cpu_thread_count: &usize) -> Vec<Line> {
+pub fn tokenize(source: &String, cpu_thread_count: &usize, scope_id_start_pos: &i32) -> Vec<Line> {
 	let lines: Arc<Mutex<Vec<Line>>> = Arc::new(Mutex::new(vec!()));
 	let chars: Vec<char> = source.chars().map( |x| match x { //Converts to Vec<char> and removes tabs and sometimes occurring \r newline
 		'\t' => ' ',
@@ -57,7 +57,7 @@ pub fn tokenize(source: &String, cpu_thread_count: &usize) -> Vec<Line> {
 	let mut line_start: usize = 0;
 	let mut line_end: usize = 0;
 	let mut scope_indentation = 0;
-	let mut scope_id = 0;
+	let mut scope_id = scope_id_start_pos.clone();
 	let mut scope_id_chain = vec!();
 	let mut tokenize_thread_handles: Vec<thread::JoinHandle<()>> = vec!();
 	let mut num_threads: usize = 0;
@@ -367,7 +367,10 @@ pub fn tokenizer_thread(line: &Line, lines_data: &Arc<Mutex<Vec<Line>>>, channel
 							match string_token.parse::<i32>() {
 								Ok(val) => line_tokens.push(Token::Int(val)),
 								Err(why) => error_handler::error::error_reporter(error_handler::Error::new (
-									String::from("Int parsing"), line_local.actual_line_num as i32, format!("Invalid int {} Error: {}",string_token,why), line_text.iter().collect()
+									String::from("Int parsing"), 
+									line_local.actual_line_num as i32, 
+									format!("Invalid int {} Error: {}",string_token,why), 
+									line_text.iter().collect()
 								))
 							}
 						}

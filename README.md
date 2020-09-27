@@ -176,4 +176,5 @@ Events are also objects so you can store them like a so
 - Translate into LLVM code inside the basic event runtime
 ### LLVM Compile
 - Send to LLVM to be compiled to target
+- Let LLVM do everything actually complicated
 - Output resulting binary
