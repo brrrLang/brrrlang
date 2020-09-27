@@ -3,7 +3,6 @@ extern crate ansi_term;
 extern crate num_cpus;
 
 use std::time::Instant;
-use std::{env, process};
 use crate::config::load_projects;
 
 pub mod token;

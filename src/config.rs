@@ -1,6 +1,7 @@
 use std::{fs, io::prelude::*, process::exit, fmt::Debug};
 use toml::Value;
 use dyn_clone::private::fmt::Formatter;
+use crate::error_handler::{Error,error::error_reporter};
 
 #[derive(Clone)]
 pub struct Config {
@@ -18,22 +19,32 @@ impl Debug for Config {
 }
 
 pub fn load_projects() -> Vec<Config> {
-    let mut conf: Vec<Config> = vec![];
+    let conf: Vec<Config>;
+
+    let error_template: Error = Error::new(
+        String::from("Config parsing"),
+         -1,
+        String::from("Unknown Error"),
+        String::new(),
+    );
 
     let mut file = match fs::File::open("brrr.toml") {
+        Ok(a) => a,
         Err(a) => {
-            eprintln!("Error opening file: {} \
-        Folder should contain a brrr.toml", a);
-            exit(-1)
+            let mut conf_error = error_template.clone();
+            conf_error.message = format!("Error opening file: {} \
+            Folder should contain a brrr.toml", a);
+            error_reporter(conf_error);
+            exit(-1); //Defiantly still a young language
         }
-        Ok(a) => a
     };
 
     let mut source = String::new();
     match file.read_to_string(&mut source) {
         Err(a) => {
-            eprintln!("Error reading file, brrr.toml\n{}", a);
-            exit(-1)
+            let mut conf_error = error_template.clone();
+            conf_error.message = format!("Error reading file, brrr.toml:\n{}", a);
+            error_reporter(conf_error);
         }
         _ => {}
     };
@@ -43,7 +54,9 @@ pub fn load_projects() -> Vec<Config> {
         Value::Table(a) => {
             match a.get("project") {
                 None => {
-                    eprintln!("Error reading config file, please make sure there is a [[project]] in the config file");
+                    let mut conf_error = error_template.clone();
+                    conf_error.message = format!("Could not find [[project]], please make sure there is a [[project]] in the config file");
+                    error_reporter(conf_error);
                     exit(-1);
                 }
                 Some(b) => {
@@ -56,12 +69,16 @@ pub fn load_projects() -> Vec<Config> {
                                             Some(g) => match g {
                                                 Value::String(h) => h.to_owned(),
                                                 _ => {
-                                                    eprintln!("Name should be a string");
-                                                    exit(-1)
+                                                    let mut conf_error = error_template.clone();
+                                                    conf_error.message = format!("Project name should be a string");
+                                                    error_reporter(conf_error);
+                                                    exit(-1);
                                                 }
                                             },
                                             None => {
-                                                eprintln!("Project should have a name");
+                                                let mut conf_error = error_template.clone();
+                                                conf_error.message = format!("Project should have a name");
+                                                error_reporter(conf_error);
                                                 exit(-1);
                                             }
                                         };
@@ -70,12 +87,16 @@ pub fn load_projects() -> Vec<Config> {
                                             Some(g) => match g {
                                                 Value::String(h) => h.to_owned(),
                                                 _ => {
-                                                    eprintln!("Name should be a string");
+                                                    let mut conf_error = error_template.clone();
+                                                    conf_error.message = format!("Project version should be a string");
+                                                    error_reporter(conf_error);
                                                     exit(-1)
                                                 }
                                             },
                                             None => {
-                                                eprintln!("Project should have a name");
+                                                let mut conf_error = error_template.clone();
+                                                conf_error.message = format!("Project should have a version");
+                                                error_reporter(conf_error);
                                                 exit(-1);
                                             }
                                         };
@@ -111,25 +132,34 @@ pub fn load_projects() -> Vec<Config> {
 
                                         let dependencies = vec![];
 
-                                        Config {authors, root, project_version, project_name, dependencies}
+                                        return Config {authors, root, project_version, project_name, dependencies};
                                     }
                                     _ => {
-                                        eprintln!("You dumbfucked up, idiot");
+                                        let mut conf_error = error_template.clone();
+                                        conf_error.message = format!("Unknown error");
+                                        error_reporter(conf_error);
                                         exit(-1)
                                     }
                                 }
                             }).collect::<Vec<Config>>();
                         },
-                        _ => {eprintln!("Error with the config, fuck you"); exit(-1)}
+                        _ => {
+                            let mut conf_error = error_template.clone();
+                            conf_error.message = format!("Unknown error");
+                            error_reporter(conf_error);
+                            exit(-1)
+                        }
                     }
                 }
             }
         }
         _ => {
-            eprintln!("You dumbfucked up, idiot");
+            let mut conf_error = error_template.clone();
+            conf_error.message = format!("Unknown error");
+            error_reporter(conf_error);
             exit(-1)
         }
     }
 
-    conf
+    return conf
 }

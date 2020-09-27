@@ -1,11 +1,12 @@
 pub mod error;
 pub mod warning;
 
+#[derive(Clone)]
 pub struct Warning {
-	error_area: String,
-	line_num: i32,
-	message: String,
-	line_text: String,
+	pub error_area: String,
+	pub line_num: i32,
+	pub message: String,
+	pub line_text: String,
 }
 impl Warning {
 	pub fn new(error_area: String, line_num: i32, message: String, line_text: String) -> Warning {
@@ -17,11 +18,13 @@ impl Warning {
 		}
 	}
 }
+
+#[derive(Clone)]
 pub struct Error {
-	error_area: String,
-	line_num: i32,
-	message: String,
-	line_text: String,
+	pub error_area: String,
+	pub line_num: i32,
+	pub message: String,
+	pub line_text: String,
 }
 impl Error {
 	pub fn new(error_area: String, line_num: i32, message: String, line_text: String) -> Error {

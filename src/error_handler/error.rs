@@ -28,5 +28,5 @@ pub fn error_reporter(error: Error) {
 		);
 	}
 	println!();
-	process::exit(1);
+	process::exit(-1);
 }
