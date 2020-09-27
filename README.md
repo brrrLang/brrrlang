@@ -159,80 +159,21 @@ Events are also objects so you can store them like a so
 ```
 
 ## Compiler overview
-```
-      +-------------------------+
-      |                         |
-      |Program is read to string|
-      |                         |
-      +-----------+-------------+
-                  |
-                  |
-                  v
-+-----------------+--------------------+
-|                                      |
-|Split into lines with scope infomation|XXXXXXXXXX
-|                                      |         XXXXX
-+-----------------+--------------------+             XX
-                  |                                   XX
-                  |                                    XX
-                  |                                     X
-                  |                         +------------------------+
-                  |                         |                        |
-                  |                         |New thread for each line|
-                  |                         |                        |
-                  |                         +-----------+------------+
-                  |                                     |
-                  |                                     |
-                  |                                     |
-                  |                                     v
-                  |                    +----------------+-------------------+
-                  |                    |                                    |
-                  |                    | Split via keywords (Spaces, +,=,@) |
-                  |                    |                                    |
-                  |                    +----------------+-------------------+
-                  |                                     |
-                  |                                     |
-                  |                                     v
-                  |                  +------------------+-------------------+
-                  |                  |                                      |
-                  |                  | Create context for the keywords      |
-                  |                  | (Variables, loop, if statement, etc) |
-                  |                  |                                      |
-                  |                  +------------------+-------------------+
-                  |                                     |
-                  |                                     |
-                  |                                     |
-                  |                                     v
-                  |                      +--------------+-------------------+
-                  |                      |                                  |
-                  |                      | Use context to convert to tokens |
-                  |                      |                                  |
-                  |                      +--------------+-------------------+
-                  |                                     |
-                  |                                     |
-                  v                                     |
-    +-------------+-----------------+                   v
-    |                               |     +-------------+------------------+
-    | Wait for threads to compleate |     |                                |
-    |                               +<----+    Save data to Arc Multex     |
-    +-------------+-----------------+     |                                |
-                  |                       +--------------------------------+
-                  |
-                  v
-    +-------------+---------------------------+
-    |                                         |
-    |Magicly convert to low-level instructions|
-    |                                         |
-    +-------------+---------------------------+
-                  |
-                  |
-                  |
-                  v
- +----------------+---------------------------+
- |                                            |
- | Convert low-level instructions to assembly |
- | on a per-architecture basis                |
- |                                            |
- +--------------------------------------------+
-
-```
+### Project configuration
+- Load project TOML file
+- Check dependencies and download required
+- Get compiler tool-chain for target
+### Tokenization
+- Read, tokenize and scan for imports on the initial file specified in toml
+- Find, read, tokenize and scan for imports on the imported files recursively
+- Find dependencies and read/tokenize
+- Pass built data object with all tokens and scope ids and plenty of metadata for things like errors
+### Scope Identification
+- Find all variables, Events and data and it's scope
+- Build a tree of scope ID's and error check for unreferenced data
+### Translation
+- Line by line, going thorough the code and using the scopes till the only instructions are the bear minium possible
+- Translate into LLVM code inside the basic event runtime
+### LLVM Compile
+- Send to LLVM to be compiled to target
+- Output resulting binary
