@@ -1,6 +1,5 @@
 use std::{fs, io::prelude::*, process::exit, fmt::Debug};
 use toml::Value;
-use dyn_clone::private::fmt::Formatter;
 use crate::error_handler::{Error,error::error_reporter};
 
 #[derive(Clone,Debug)]
