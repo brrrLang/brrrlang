@@ -25,6 +25,8 @@ pub fn warning_reporter(warning: Warning) {
 			)),
 			Colour::White.italic().paint(warning.line_text)
 		);
+	} else if warning.message != String::new() {
+		println!("{}{}",STYLE.paint("Line: "),Colour::White.italic().paint(warning.line_text))
 	}
 	println!();
 }

@@ -17,37 +17,37 @@ BrrLang is a language based on events, there are no function calls.
 Heres how it works
 - `@import` tags import a specific module into the current module, in the case of this example, the std module. This will also auto-require any other sub-modules of 
 the module that have been outline in the mod.spruce
-- `@require` This imports a submodule of an already imported module or submodule into the current module.
-- `@EventHandler ehid = 100, e = std::StartEvent` is the main method of your BrrLang application. It is a EventHandler for the StartEvent, so everytime a StartEvent 
+- `@require` This imports a sub-module of an already imported module or sub-module into the current module.
+- `@EventHandler ehid = 100, e = std::StartEvent` is the main method of your BrrLang application. It is a EventHandler for the StartEvent, so every time a StartEvent 
 is 
-raised, once the runtime hase been initlised, the StartEvent is raised and this EventHandler is called asyncouriously.
+raised, once the runtime has been initialized, the StartEvent is raised and this EventHandler is called asynchronously.
 - `raise std::io::PrintLnEvent("Hello world");` This line raises the std::io::PrintLnEvent event with the arguments of "Hello world". This causes all the EventHandlers for 
 std::io::PrintLineEvent to be called 
-asyncourously. This prints 'hello world' and the newline charcter to the console.
+asynchronous. This prints 'hello world' and the newline character to the console.
 - `e.exitCode = 0;` This sets the value for exitCode for the StartEvent to 0, events are an objects that inherits the event class.
 - `raise e.FinnishEvent() await default` This calls the finnish method on the StartEvent, this tells the application that this event's execution has been completed
-- `@export` This exports a specific event handler to an alias for example `@export Foo:100 default` will map the Foo event handeler with the id of 100 as the 
-default event handler. In this exapmle the runtime raises StartEvent, then awaits the event with the alias default.
+- `@export` This exports a specific event handler to an alias for example `@export Foo:100 default` will map the Foo event handler with the id of 100 as the 
+default event handler. In this example the runtime raises StartEvent, then awaits the event with the alias default.
 
 ## Vaiables 
-Variables are mutable by default, they are staticaly typed. You use the let keyword to define them. eg:
+Variables are mutable by default, they are statically typed. You use the let keyword to define them. eg:
 ```brrlang
 let a = 0;
 ```
 This will create a int_32 with the value 0;
 
 ### Constants
-Constants are like variables with immuatable values.
+Constants are like variables with immutable values.
 ```brrlang
 let const a = 0;
 ```
 
 ### Manulay defining types
-You can manualy define the type of a variable using the : operator
+You can manually define the type of a variable using the : operator
 ```brrlang
 let a: int_32;
 ```
-This will create an unitilized int_32
+This will create an uninitialized int_32
 
 With number primitives, you can define their type using putting the type after the number
 ```brrlang
@@ -75,7 +75,7 @@ class FooEvent {
 
 The `@event` tag tells the compiler that this is an event, inherit for Event.
 
-The `pub require` block is a block for all of the infomation that must be passed to the consturctor when you create a object of this type, like in Raise. Think 
+The `pub require` block is a block for all of the information that must be passed to the constructor when you create a object of this type, like in Raise. Think 
 of these are your parameters for you event handler
 
 The `pub` block is just public members

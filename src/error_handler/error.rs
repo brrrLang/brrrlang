@@ -26,6 +26,8 @@ pub fn error_reporter(error: Error) {
 			)),
 			Colour::White.italic().paint(error.line_text)
 		);
+	} else if error.message != String::new() {
+		println!("{}{}",STYLE.paint("Line: "),Colour::White.italic().paint(error.line_text))
 	}
 	println!();
 	process::exit(-1);

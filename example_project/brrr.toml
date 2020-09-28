@@ -1,9 +1,8 @@
 [[project]]
-  name = "ExampleProject"
-  version = "1.0.0"
-  root = "src/main.bl"
-
-[[project]]
 name = "ExampleProject"
 version = "1.0.0"
-root = "cock_sucker/main.bl"
+root = "src/main.bl"
+
+[[dependencies]]
+Yes = "0.0.2"
+Naslkdnaslkd = "0.0.1"

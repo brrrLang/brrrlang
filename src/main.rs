@@ -15,7 +15,7 @@ pub mod config;
 fn main() {
     let projects = load_projects();
     let start_time = Instant::now();
-    let initial_file_path = projects[0].clone().root;
+    let initial_file_path = projects.clone().root;
     let cpu_thread_count = num_cpus::get();
     let mut all_parsed_tokens: Vec<import_manager::ParsedFile> = vec!();
     import_manager::main::recursively_find_imports(&mut all_parsed_tokens,&cpu_thread_count,&initial_file_path,0);
