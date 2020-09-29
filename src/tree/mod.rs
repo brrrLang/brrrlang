@@ -1,26 +1,13 @@
-use crate::tree::module::Module;
+use crate::import_manager;
+use crate::token::Token;
 
-pub mod module;
-
-#[derive(Clone)]
-pub struct Tree {
-	pub name: String,
-	pub root_module: Module,
-	pub children: Vec<Module>
-}
-
-impl Tree {
-	pub fn new_no_children(name: &String, root_module: &Module) -> Tree {
-		let name = format!("{}", name);
-		let root_module = root_module.to_owned();
-		Tree { name, root_module, children: vec!() }
-	}
-
-	pub fn new(name: String, root_module: module::Module, children: Vec<Module>) -> Tree {
-		Tree { name, root_module, children }
-	}
-
-	pub fn has_children(&self) -> bool {
-		return self.children.is_empty();
-	}
+pub fn find_events(source: &Vec<import_manager::ParsedFile>) {
+    for c in source.iter() {
+        for r in c.lines.iter() {
+            match r.line_token.iter().position(|d| d.to_owned().to_owned() == Token::Event) {
+                Some(a) => println!("{}", r.line_token[a + 1]),
+                None => {}
+            }
+        }
+    }
 }
