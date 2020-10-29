@@ -1,7 +1,6 @@
 [[project]]
 name = "ExampleProject"
 version = "1.0.0"
-root = "src/main.bl"
 
 [[dependencies]]
 Yes = "0.0.2"

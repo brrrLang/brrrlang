@@ -1,0 +1,15 @@
+@pkg "Example";
+
+@import "Std";
+
+@use Std::IO::[ReadLine, PrintLine, StrErr];
+@use Std::String::[StrParse, StrFmt];
+
+() {
+    while true {
+        ReadLine() -> new val;
+        StrParse<i32>(val)
+            | Ok(a) return a
+            | Err(_) PrintLine(StdErr, StrFmt("{} is not a number", val))
+    }
+} -> pub ReadI32<i32>
