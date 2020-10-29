@@ -40,7 +40,7 @@ pub enum Token {
 	Raise,      		// raise
 	Await,		        // await
 	Bool(bool),			// True, False
-	Let ,       		// let
+	New,       		// let
 	LBrace,             // (
 	RBrace,             // )
 	LCurlyBrace,        // {
@@ -88,7 +88,7 @@ pub enum Token {
 	EventHandler,		// EventHandler
 	Event,				// Event
 	Use,				// use
-	
+	Package,			// Package
 }
 
 impl fmt::Display for Token {
@@ -99,7 +99,7 @@ impl fmt::Display for Token {
 			Token::Float(n) 			=> format!("Float {}", n),
 			Token::String(s)			=> format!("String {}", s),
 			Token::Identifier(i)		=> format!("Identifier {}", i),
-			Token::Let					=> format!("Let"),
+			Token::New => format!("Let"),
 			Token::Raise				=> format!("Raise"),
 			Token::Await				=> format!("Await"),
 			Token::Bool(b)				=> format!("Bool {}", b),
@@ -149,7 +149,8 @@ impl fmt::Display for Token {
 			Token::DefaultKeyword		=> format!("Default"),
 			Token::EventHandler			=> format!("EventHandler"),
 			Token::Event				=> format!("Event"),
-			Token::Use					=> format!("Use")
+			Token::Use					=> format!("Use"),
+			Token::Package 				=> format!("Package")
 		})
 	}
 }

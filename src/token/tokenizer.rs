@@ -303,11 +303,10 @@ pub fn tokenizer_thread(line: &Line, lines_data: &Arc<Mutex<Vec<Line>>>, channel
 				";" => {},
 				"." => line_tokens.push(Token::Period),
 				"," => line_tokens.push(Token::Comma),
-				"while" => line_tokens.push(Token::Comma),
-				"for" => line_tokens.push(Token::Comma),
-				"until" => line_tokens.push(Token::Comma),
-				"if" => line_tokens.push(Token::Comma),
-				"else" => line_tokens.push(Token::Comma),
+				"while" => line_tokens.push(Token::While),
+				"for" => line_tokens.push(Token::For),
+				"if" => line_tokens.push(Token::If),
+				"else" => line_tokens.push(Token::Else),
 				"_" => line_tokens.push(Token::DiscardVar),
 				"::" => line_tokens.push(Token::ScopeResolution),
 				"=" => line_tokens.push(Token::Assignment),
@@ -325,21 +324,15 @@ pub fn tokenizer_thread(line: &Line, lines_data: &Arc<Mutex<Vec<Line>>>, channel
 				"pub" => line_tokens.push(Token::Pub),
 				"true" => line_tokens.push(Token::LogicalTrue),
 				"false" => line_tokens.push(Token::LogicalFalse),
-				"raise" => line_tokens.push(Token::Raise),
-				"await" => line_tokens.push(Token::Await),
-				"default" => line_tokens.push(Token::DefaultKeyword),
 				":" => line_tokens.push(Token::Colon),
-				"let" => line_tokens.push(Token::Let),
+				"new" => line_tokens.push(Token::New),
 				"" => (),
 				 _	=> {
 					char_token = string_token.chars().collect();
 					if line_tokens.len() != 0 && line_tokens[line_tokens.len()-1] == Token::Tag { //@ tags first means identifer next
 						match string_token.as_str(){
-							"export" => line_tokens.push(Token::Export),
+							"pkg" => line_tokens.push(Token::Package),
 							"import" => line_tokens.push(Token::Import),
-							"require" => line_tokens.push(Token::Require),
-							"Event" => line_tokens.push(Token::Event),
-							"EventHandler" => line_tokens.push(Token::EventHandler),
 							"use" => line_tokens.push(Token::Use),
 							_ => error_handler::error::error_reporter(error_handler::Error::new(
 								String::from("Tag matching"), line_local.actual_line_num as i32, format!("Invalid tag: {}",string_token), line_text.iter().collect()
