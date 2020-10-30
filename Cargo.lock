@@ -16,6 +16,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cdb031dd78e28731d87d56cc8ffef4a8f36ca26c38fe2de700543e627f8a464a"
 
 [[package]]
+name = "brrrlang"
+version = "0.1.0"
+dependencies = [
+ "ansi_term",
+ "dyn-clone",
+ "num_cpus",
+ "rayon",
+ "toml",
+]
+
+[[package]]
 name = "cfg-if"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -162,17 +173,6 @@ name = "serde"
 version = "1.0.116"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "96fe57af81d28386a513cbc6858332abc6117cfdb5999647c6444b8f43a370a5"
-
-[[package]]
-name = "spurcec"
-version = "0.1.0"
-dependencies = [
- "ansi_term",
- "dyn-clone",
- "num_cpus",
- "rayon",
- "toml",
-]
 
 [[package]]
 name = "toml"
