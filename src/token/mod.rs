@@ -2,21 +2,31 @@ use std::fmt;
 
 pub mod tokenizer;
 
+/// Info struct with relevant info about each line.
 #[derive(Clone, Debug)]
 pub struct Line {
-    //Holder obj with relevant info about each instructions
+    /// The text in the line
     pub line_text: String,
-    pub line_token: Vec<Token>,
+    /// The text split into string tokens
     pub line_split: Vec<String>,
+    /// The parsed tokens in the line
+    pub line_token: Vec<Token>,
+    /// Scope data
     pub scope_indentation: i32,
+    /// Parent scopes
     pub scope_id_chain: Vec<i32>,
+    /// The instruction number
     pub line_num: usize,
+    /// The relevant line number in the actual code (Used for errors)
     pub actual_line_num: usize,
+    /// Start position in file
     pub line_char_start: usize,
+    /// End position in file
     pub line_char_end: usize,
 }
 
 impl Line {
+    /// Returns a struct with default values
     pub fn new() -> Line {
         return Line {
             line_text: String::new(),
@@ -32,121 +42,123 @@ impl Line {
     }
 }
 
+/// All possible tokens and keywords, fully converted to after the tokenizer
 #[derive(Clone, Debug, PartialEq)]
 pub enum Token {
+    /// @
     Tag,
-    // @
+    /// [0-9]+
     Int(i32),
-    // [0-9]+
+    /// [0-9]+.[0-9]+
     Float(f32),
-    // [0-9]+.[0-9]+
+    /// ""
     String(String),
-    // ""
+    /// a-zA-Z[a-zA-Z_0-9]+
     Identifier(String),
-    // a-zA-Z[a-zA-Z_0-9]+
+    /// raise
     Raise,
-    // raise
+    /// await
     Await,
-    // await
+    /// True, False
     Bool(bool),
-    // True, False
+    /// new
     New,
-    // new
+    /// (
     LBrace,
-    // (
+    /// )
     RBrace,
-    // )
+    /// {
     LCurlyBrace,
-    // {
+    /// }
     RCurlyBrace,
-    // }
+    /// [
     LSquareBrace,
-    // [
+    /// ]
     RSquareBrace,
-    // ]
+    /// =
     Equal,
-    // =
+    /// !=
     LogicalNotEqual,
-    // !=
+    /// &&
     LogicalAnd,
-    // &&
+    /// ||
     LogicalOr,
-    // ||
+    /// true
     LogicalTrue,
-    // true
+    /// false
     LogicalFalse,
-    // false
+    /// <
     LessThan,
-    // <
+    /// >
     GreaterThan,
-    // >
+    /// <=
     LessThanOrEqual,
-    // <=
+    /// >=
     MoreThanOrEqual,
-    // >=
+    /// +
     Plus,
-    // +
+    /// -
     Minus,
-    // -
+    /// +=
     PlusEqual,
-    // +=
+    /// -=
     MinusEqual,
-    // -=
+    /// ++
     PlusPlus,
-    // ++
+    /// ->
     Arrow,
-    // ->
+    /// |
     Pipe,
-    // |
+    /// !
     ExclamationMark,
-    // !
+    /// .
     Period,
-    // .
+    /// ,
     Comma,
-    // ,
+    /// *
     Star,
-    // *
+    /// ::
     ScopeResolution,
-    // ::
+    /// :
     Colon,
-    // :
+    /// =
     Assignment,
-    // =
+    /// ;
     SemiColon,
-    // ;
+    /// _
     DiscardVar,
-    // _
+    /// pub
     Pub,
-    // pub
+    /// export
     Export,
-    // export
+    /// enum
     Enum,
-    // enum
+    /// while
     While,
-    // while
+    /// for
     For,
-    // for
+    /// loop
     Loop,
-    // loop
+    /// if
     If,
-    // if
+    /// else
     Else,
-    // else
+    /// until
     Until,
-    // until
+    /// default
     DefaultKeyword,
-    // default
+    /// import
     Import,
-    // import
+    /// require
     Require,
-    // require
+    /// EventHandler
     EventHandler,
-    // EventHandler
+    /// Event
     Event,
-    // Event
+    /// use
     Use,
-    // use
-    Package,            // Package
+    /// Package
+    Package,
 }
 
 impl fmt::Display for Token {

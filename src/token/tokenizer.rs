@@ -11,12 +11,14 @@ use std::time::{Duration, Instant};
 use crate::error_handler;
 use crate::token::*;
 
+/// Wrapper for the read_file and tokenize functions
 pub fn parse_file(file_name: &String, cpu_thread_count: &usize, scope_id_start_pos: &i32) -> Vec<Line> {
     let file = read_file(&file_name);
     let _tokens = tokenize(&file, &cpu_thread_count, scope_id_start_pos);
     return _tokens;
 }
 
+/// Reads a file into a string
 pub fn read_file(path: &String) -> String {
     // Open the file
     let file = fs::OpenOptions::new().read(true).open(path);
@@ -42,7 +44,7 @@ pub fn read_file(path: &String) -> String {
     }
 }
 
-
+/// Takes one long string, and converts it to the Token enum
 pub fn tokenize(source: &String, cpu_thread_count: &usize, scope_id_start_pos: &i32) -> Vec<Line> {
     let lines: Arc<Mutex<Vec<Line>>> = Arc::new(Mutex::new(vec!()));
     let chars: Vec<char> = source.chars().map(|x| match x { //Converts to Vec<char> and removes tabs and sometimes occurring \r newline
@@ -176,8 +178,10 @@ pub fn tokenize(source: &String, cpu_thread_count: &usize, scope_id_start_pos: &
     //println!("Lines = {:#?}",lines);
     let lines = Arc::clone(&lines);
     return lines.lock().unwrap().clone();
+    
 }
 
+/// A separate thread for each line
 pub fn tokenizer_thread(line: &Line, lines_data: &Arc<Mutex<Vec<Line>>>, channel_tx: &mpsc::Sender<i32>, num_threads: &usize) -> thread::JoinHandle<()> {
     // println!("\n {:?} Tokenizer thread started", num_threads);
     let lines_data = Arc::clone(lines_data);
@@ -296,7 +300,7 @@ pub fn tokenizer_thread(line: &Line, lines_data: &Arc<Mutex<Vec<Line>>>, channel
         let mut line_tokens: Vec<Token> = vec!();
         while i < line_split.len() {
             string_token = line_split[i].clone();
-            // Check if keyword line_tokens.push()
+            // Converts string token to enum Token
             match string_token.as_str() {
                 "@" => line_tokens.push(Token::Tag),
                 "(" => line_tokens.push(Token::LBrace),
@@ -335,7 +339,8 @@ pub fn tokenizer_thread(line: &Line, lines_data: &Arc<Mutex<Vec<Line>>>, channel
                 "" => (),
                 _ => {
                     char_token = string_token.chars().collect();
-                    if line_tokens.len() != 0 && line_tokens[line_tokens.len() - 1] == Token::Tag { //@ tags first means identifer next
+                    //@ Extra checking to not pull out the tag keywords in things like variables
+                    if line_tokens.len() != 0 && line_tokens[line_tokens.len() - 1] == Token::Tag { 
                         match string_token.as_str() {
                             "pkg" => line_tokens.push(Token::Package),
                             "import" => line_tokens.push(Token::Import),
@@ -344,11 +349,6 @@ pub fn tokenizer_thread(line: &Line, lines_data: &Arc<Mutex<Vec<Line>>>, channel
                                 String::from("Tag matching"), line_local.actual_line_num as i32, format!("Invalid tag: {}", string_token), line_text.iter().collect(),
                             ))
                         }
-                        let mut file_path = String::new();
-                        for token in line_split[i + 1..].iter() {
-                            file_path = [file_path, token.clone()].concat();
-                        }
-                        line_tokens.push(Token::Identifier(file_path));
                     } else if char_token[0] == '"' || char_token[0] == '\'' { //String
                         char_token.remove(0);
                         char_token.pop();
@@ -361,7 +361,8 @@ pub fn tokenizer_thread(line: &Line, lines_data: &Arc<Mutex<Vec<Line>>>, channel
                                     String::from("Float parsing"), line_local.actual_line_num as i32, format!("Invalid float {} Error: {}", string_token, why), line_text.iter().collect(),
                                 ))
                             }
-                        } else { //Int
+                        } else { 
+                            // Int
                             match string_token.parse::<i32>() {
                                 Ok(val) => line_tokens.push(Token::Int(val)),
                                 Err(why) => error_handler::error::error_reporter(error_handler::Error::new(
