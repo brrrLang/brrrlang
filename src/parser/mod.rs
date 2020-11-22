@@ -30,6 +30,7 @@ pub fn lex(files: &Vec<ParsedFile>) -> Vec<LexedFile> {
             let mut imports = vec!();
             let mut uses = vec!();
             for line in file.lines.iter() {
+                println!("{:?}", line);
                 for (a, token) in line.line_token.iter().enumerate() {
                     if token == &Token::Package {
                         if package.as_str() == "" {

@@ -1,13 +1,21 @@
 @pkg "Main";
 
 @import "Std";
-
+// This do be a comment
+/* This also
+ * Do be
+ * A multiline comment
+*/
 @use Std::IO::[PrintLine, ReadLine];
 
+/**
+Look ma, function documentation!
+*/
 () {
+    96 -> new number;
     PrintLine("Hello, what is your name? ");
     ReadLine() -> new name;
     PrintLine(StrFmt("Hello {}, how old are you? ", name));
-    example_project::Example::ReadI32 -> new age;
+    example_project::Example::ReadI32() -> new age;
     PrintLine(StrFmt("Hello {}, you are {} years old", name, age));
 } -> Main
