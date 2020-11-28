@@ -1,20 +1,18 @@
 use regex::Regex;
 
 use super::Token;
-use crate::token::Token::Identifier;
 use crate::error_handler::error::error_reporter;
 use crate::error_handler::Error;
 use std::process::exit;
 
 /// Structure for storing a parsed file
-/// # Fields
-/// - `path`:  The path of the file
-/// - `source`: The original source code of the file, used for error reporting
-/// - `tokens`: The tokenized source code
 #[derive(Debug, Clone)]
 pub struct ParsedFile {
+    /// The path of the file
     pub path: String,
+    /// The original source code of the file, used for error reporting
     pub source: String,
+    /// The tokenized source code
     pub tokens: Vec<ParsedToken>,
 }
 
@@ -841,7 +839,7 @@ impl ParsedFile {
     /// Gets the text on a given line
     /// # Params
     /// - `line`: The line number you want to get the text at
-    pub fn resolve_line(&self, line: i32) -> Option<String> {
+    pub fn resolve_line(&self, line: usize) -> Option<String> {
         Some(self.source.split("\n").collect::<Vec<&str>>().get(line)?.to_string())
     }
 }
@@ -858,8 +856,13 @@ pub struct ParsedToken {
     pub char: i32,
 }
 
+/// Converts a `String` to a `Token`
+/// # Params
+/// - `source`: The string to be converted
+/// # Returns
+/// - `Some(Token)`: If a match can be found
+/// - `None`: If it is not a valid token
 fn get_token(source: &String) -> Option<Token> {
-    println!("{}", source);
     if Regex::new("[a-zA-Z]([0-9a-zA-Z_]+)?").unwrap().is_match(source) {
         Some(Token::Identifier(source.to_owned()))
     } else if Regex::new("[0-9]+").unwrap().is_match(source) {
