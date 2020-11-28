@@ -23,6 +23,8 @@ impl ParsedFile {
     /// # Params
     /// - `source`: The original source code to be tokenized
     /// - `path`: The path of the source file
+    /// # Returns
+    /// The passed file
     pub fn new(source: &String, path: &String) -> ParsedFile {
         let chars: Vec<char> = source.chars().map(|x| match x { //Converts to Vec<char> and removes tabs and sometimes occurring \r newline
             '\t' => ' ',
@@ -835,6 +837,12 @@ impl ParsedFile {
         }
 
         ParsedFile { path: path.to_owned(), source: source.to_owned(), tokens }
+    }
+    /// Gets the text on a given line
+    /// # Params
+    /// - `line`: The line number you want to get the text at
+    pub fn resolve_line(&self, line: i32) -> Option<String> {
+        Some(self.source.split("\n").collect::<Vec<&str>>().get(line)?.to_string())
     }
 }
 
