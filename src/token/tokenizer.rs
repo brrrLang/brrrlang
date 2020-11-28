@@ -1,391 +1,888 @@
-use std::fs;
-use std::io::prelude::*;
-use std::process;
-use std::sync::{Arc, Mutex};
-use std::sync::mpsc::{Receiver, Sender};
-use std::sync::mpsc;
-use std::thread;
-#[allow(unused_imports)]
-use std::time::{Duration, Instant};
+use regex::Regex;
 
-use crate::error_handler;
-use crate::token::*;
+use super::Token;
+use crate::token::Token::Identifier;
+use crate::error_handler::error::error_reporter;
+use crate::error_handler::Error;
+use std::process::exit;
 
-/// Wrapper for the read_file and tokenize functions
-pub fn parse_file(file_name: &String, cpu_thread_count: &usize, scope_id_start_pos: &i32) -> Vec<Line> {
-    let file = read_file(&file_name);
-    let _tokens = tokenize(&file, &cpu_thread_count, scope_id_start_pos);
-    return _tokens;
+/// Structure for storing a parsed file
+/// # Fields
+/// - `path`:  The path of the file
+/// - `source`: The original source code of the file, used for error reporting
+/// - `tokens`: The tokenized source code
+#[derive(Debug, Clone)]
+pub struct ParsedFile {
+    pub path: String,
+    pub source: String,
+    pub tokens: Vec<ParsedToken>,
 }
 
-/// Reads a file into a string
-pub fn read_file(path: &String) -> String {
-    // Open the file
-    let file = fs::OpenOptions::new().read(true).open(path);
+impl ParsedFile {
+    /// Takes a string and converts it into a ParsedFile
+    /// # Params
+    /// - `source`: The original source code to be tokenized
+    /// - `path`: The path of the source file
+    pub fn new(source: &String, path: &String) -> ParsedFile {
+        let chars: Vec<char> = source.chars().map(|x| match x { //Converts to Vec<char> and removes tabs and sometimes occurring \r newline
+            '\t' => ' ',
+            '\r' => ' ',
+            _ => x
+        }).collect::<Vec<char>>();
 
-    // Check for any errors
-    if !file.is_ok() {
-        // Report the error
-        eprintln!("Error opening file {}, error: {:?}", path, file.unwrap_err().kind());
-        process::exit(0x1);
-    }
+        let lines = source.split("\n").collect::<Vec<&str>>();
 
-    let mut file = file.unwrap();
-    let mut source = String::new();
-    // Reading the file
-    match file.read_to_string(&mut source) {
-        // Reporting the errors and exiting the compiler
-        Err(a) => {
-            eprintln!("Error reading file {:?}", a.kind());
-            process::exit(0x1);
-        }
-        // Returning the read in source code
-        _ => return source
-    }
-}
+        // The current line that the program is parsing
+        let mut line = 1;
+        // Where the last token started from
+        let mut start_char = 1;
+        // Where the current token starts
+        let mut tok_char = 1;
 
-/// Takes one long string, and converts it to the Token enum
-pub fn tokenize(source: &String, cpu_thread_count: &usize, scope_id_start_pos: &i32) -> Vec<Line> {
-    let lines: Arc<Mutex<Vec<Line>>> = Arc::new(Mutex::new(vec!()));
-    let chars: Vec<char> = source.chars().map(|x| match x { //Converts to Vec<char> and removes tabs and sometimes occurring \r newline
-        '\t' => ' ',
-        '\r' => ' ',
-        _ => x
-    }).collect::<Vec<char>>();
-    let mut current_char: char = ' ';
-    let mut last_char: char;
-    let mut source_loc = 0;
-    let mut line: Line;
-    let mut line_num: usize = 0;
-    let mut actual_line_num: usize = 1;
-    let mut line_start: usize = 0;
-    let mut line_end: usize = 0;
-    let mut scope_indentation = 0;
-    let mut scope_id = scope_id_start_pos.clone();
-    let mut scope_id_chain = vec!();
-    let mut tokenize_thread_handles: Vec<thread::JoinHandle<()>> = vec!();
-    let mut num_threads: usize = 0;
-    let (channel_tx, channel_rx): (Sender<i32>, Receiver<i32>) = mpsc::channel();
+        // The accumulation of all characters throughout the tokenization process
+        let mut token = String::new();
 
-    while source_loc < chars.len() {
-        last_char = current_char.clone();
-        current_char = chars[source_loc];
-        if current_char == ';' || current_char == '{' || current_char == '}' {
-            line = Line::new();
-            line.line_text = String::from(
-                chars[
-                    line_start..{ line_end + if current_char != ';' { 1 } else { 0 } }
-                    ]
-                    .iter().collect::<String>().trim()
-            );
-            if current_char == '{' {
-                scope_indentation += 1;
-                scope_id += 1;
-                scope_id_chain.push(scope_id);
-            } else if current_char == '}' {
-                scope_indentation -= 1;
-                scope_id_chain.pop();
-            }
-            line.line_num = line_num;
-            line.actual_line_num = actual_line_num;
-            line.scope_indentation = scope_indentation;
-            line.scope_id_chain = scope_id_chain.clone();
-            line.line_char_start = line_start;
-            line.line_char_end = line_end;
-            //Thread handler
-            if num_threads <= *cpu_thread_count {
-                tokenize_thread_handles.push(tokenizer_thread(&line, &lines, &channel_tx, &num_threads));
-                num_threads += 1;
+        // Vector of resulting parsed tokens
+        let mut tokens = Vec::new();
+
+        // Set whenever a string is being read
+        let mut read_string = false;
+        // Set whenever a multiline comment is encountered
+        let mut ml_comment = false;
+
+        // The index into the charter array to get the current token
+        let mut i = 0;
+
+        while i < source.len() {
+            // Used for converting char to &str, has 0 use otherwise
+            let mut tmp = [0; 4];
+
+            // Get the current character
+            let char = chars[i];
+
+
+            if read_string {
+                token += char.encode_utf8(&mut tmp);
+                if char == '"' {
+                    tokens.push(ParsedToken { token: Token::String(token.clone()), line, char: start_char });
+                    token = String::new();
+                    read_string = false;
+                    start_char = tok_char;
+                } else if char == '\n' {
+                    line += 1;
+                    tok_char = 0;
+                }
+            } else if ml_comment {
+                if char == '*' && chars[i + 1] == '/' {
+                    ml_comment = false;
+                }
+                i += 1;
             } else {
-                channel_rx.recv().unwrap();
-                tokenize_thread_handles.push(tokenizer_thread(&line, &lines, &channel_tx, &num_threads));
-                num_threads += 1;
-            }
-            // thread::sleep(Duration::from_millis(500));
-            line_start = source_loc + 1;
-            line_end = line_start;
-            line_num += 1;
-        } else if current_char == '/' && last_char == '/' { //One line comment
-            while source_loc < chars.len() && current_char != '\n' {
-                current_char = chars[source_loc];
-                source_loc += 1;
-            }
-            line_start = source_loc;
-            actual_line_num += 1;
-            line_end = line_start + 1;
-        } else if current_char == '/' && last_char == '*' { //Multiline comment;
-            while source_loc < chars.len() && !(last_char == '*' && current_char == '/') {
-                last_char = current_char.clone();
-                current_char = chars[source_loc];
-                if current_char == '\n' {
-                    actual_line_num += 1;
-                }
-                source_loc += 1;
-            }
-            line_start = source_loc + 1;
-            line_end = line_start;
-        } else if current_char == '"' {
-            source_loc += 1;
-            last_char = current_char.clone();
-            current_char = chars[source_loc];
-            while current_char != '"' || last_char == '\\' {
-                if source_loc >= chars.len() {
-                    let error = error_handler::Error::new(String::from("tokenize"), actual_line_num as i32, String::from("String was not closed"), String::new());
-                    error_handler::error::error_reporter(error);
-                }
-                last_char = current_char.clone();
-                current_char = chars[source_loc];
-                source_loc += 1;
-                line_end += 1;
-            }
-            source_loc -= 1;
-            line_end += 1;
-        } else if current_char == '\'' {
-            source_loc += 1;
-            last_char = current_char.clone();
-            current_char = chars[source_loc];
-            while current_char != '\'' || last_char == '\\' {
-                if source_loc >= chars.len() {
-                    let error = error_handler::Error::new(String::from("tokenize"), actual_line_num as i32, String::from("String was not closed"), String::new());
-                    error_handler::error::error_reporter(error)
-                }
-                last_char = current_char.clone();
-                current_char = chars[source_loc];
-                source_loc += 1;
-                line_end += 1;
-            }
-            source_loc -= 1;
-            line_end += 1;
-        } else if current_char == '\n' {
-            actual_line_num += 1;
-            line_end += 1;
-        } else {
-            line_end += 1;
-        }
-
-
-        source_loc += 1;
-    }
-    for handle in tokenize_thread_handles {
-        handle.join().unwrap();
-    }
-    if scope_indentation != 0 {
-        error_handler::error::error_reporter(
-            error_handler::Error::new(String::from("tokenize"), -1, String::from("Missing closing curly brackets"), String::new())
-        );
-    }
-
-    //println!("Lines = {:#?}",lines);
-    let lines = Arc::clone(&lines);
-    return lines.lock().unwrap().clone();
-    
-}
-
-/// A separate thread for each line
-pub fn tokenizer_thread(line: &Line, lines_data: &Arc<Mutex<Vec<Line>>>, channel_tx: &mpsc::Sender<i32>, num_threads: &usize) -> thread::JoinHandle<()> {
-    // println!("\n {:?} Tokenizer thread started", num_threads);
-    let lines_data = Arc::clone(lines_data);
-    let mut line_local = line.clone();
-    let channel_thread_tx = channel_tx.clone();
-    let thread_builder = thread::Builder::new()
-        .name(num_threads.to_string().into());
-    let handle = thread_builder.spawn(move || {
-        // println!("Line text: {}", line_local.line_text);
-        let line_text: Vec<char> = line_local.line_text.clone().chars().collect();
-
-        /*
-        Splits the line into the relevant strings by operators and spaces
-        */
-        let mut line_split: Vec<String> = vec!(String::new());
-        let mut line_split_pointer = 0;
-        let mut i: usize = 0;
-        while i < line_text.len() {
-            if line_text[i] == ' ' || line_text[i] == '\n' {
-                if line_split[line_split_pointer].len() != 0 {
-                    line_split.push(String::new());
-                    line_split_pointer += 1;
-                }
-            } else if
-            (line_text[i] == '=' && line_text[i + 1] != '=' && line_text[i + 1] != '<') || line_text[i] == '+' || line_text[i] == '|' || (line_text[i] == '-' && line_text[i + 1] != '>') || line_text[i] == '*' ||
-                line_text[i] == '(' || line_text[i] == ')' || line_text[i] == '[' || line_text[i] == ']' || line_text[i] == '{' || line_text[i] == '}' || line_text[i] == ',' || line_text[i] == '.' ||
-                (line_text[i] == '<' && line_text[i + 1] != '=') || (line_text[i] == '>' && line_text[i + 1] != '=') || line_text[i] == ';' || (line_text[i] == '!' && line_text[i + 1] != '=')
-            {
-                if line_split[line_split_pointer].len() != 0 {
-                    line_split_pointer += 2;
-                    line_split.push(String::new());
-                    line_split.push(String::new());
-                    line_split[line_split_pointer - 1].push(line_text[i]);
-                } else {
-                    line_split_pointer += 2;
-                    line_split.push(String::new());
-                    line_split.push(String::new());
-                    line_split[line_split_pointer - 1].push(line_text[i]);
-                }
-            } else if (line_text[i] == '/' && line_text[i + 1] == '/') || (line_text[i] == ':' && line_text[i + 1] == ':') {
-                line_split_pointer += 2;
-                line_split.push(String::new());
-                line_split.push(String::new());
-                line_split[line_split_pointer - 1].push(line_text[i]);
-                line_split[line_split_pointer - 1].push(line_text[i + 1]);
-                i += 1;
-            } else if line_text[i] == ':' && line_text[i + 1] != ':' {
-                line_split_pointer += 2;
-                line_split.push(String::new());
-                line_split[line_split_pointer - 1].push(line_text[i]);
-            } else if (line_text[i] == '>' || line_text[i] == '<') && line_text[i + 1] == '=' {
-                line_split_pointer += 3;
-                line_split.push(String::new());
-                line_split.push(String::new());
-                line_split[line_split_pointer - 1].push(line_text[i]);
-                line_split[line_split_pointer - 1].push(line_text[i + 1]);
-                i += 1;
-            } else if (line_text[i] == '-' || line_text[i] == '>') && line_text[i + 1] == '=' {
-                line_split_pointer += 3;
-                line_split.push(String::new());
-                line_split.push(String::new());
-                line_split[line_split_pointer - 1].push(line_text[i]);
-                line_split[line_split_pointer - 1].push(line_text[i + 1]);
-                i += 1;
-            } else if line_text[i] == '!' && line_text[i + 1] == '=' {
-                line_split_pointer += 3;
-                line_split.push(String::new());
-                line_split.push(String::new());
-                line_split[line_split_pointer - 1].push(line_text[i]);
-                line_split[line_split_pointer - 1].push(line_text[i + 1]);
-                i += 1;
-            } else if line_text[i] == '@' && i == 0 {
-                line_split[line_split_pointer].push(line_text[i]);
-                line_split_pointer += 1
-            } else if line_text[i] == '"' { // don't want to split strings
-                i += 1;
-                while line_text[i] != '"' && line_text[i - 1] != '\\' {
-                    line_split[line_split_pointer].push(line_text[i]);
-                    i += 1;
-                }
-                line_split_pointer += 1;
-            } else if line_text[i] == '\'' { //and you can't have ambiguity between string declaration symbols
-                line_split[line_split_pointer].push(line_text[i]);
-                i += 1;
-                while line_text[i] != '\'' && line_text[i - 1] != '\\' {
-                    line_split[line_split_pointer].push(line_text[i]);
-                    i += 1;
-                }
-                line_split[line_split_pointer].push(line_text[i]);
-                line_split_pointer += 1;
-            } else {
-                line_split[line_split_pointer].push(line_text[i]);
-            }
-
-            while line_split_pointer >= line_split.len() {
-                line_split.push(String::new());
-            }
-            i += 1;
-        }
-        line_split_pointer = 0;
-        while line_split_pointer < line_split.len() { //Clear out empty splits
-            if line_split[line_split_pointer] == String::new() {
-                line_split.remove(line_split_pointer);
-                // x+=1;
-            } else {
-                line_split_pointer += 1;
-            }
-        }
-        line_local.line_split = line_split.clone();
-        /*
-        Matches the keywords using context
-        */
-        i = 0;
-        let mut string_token: String;
-        let mut char_token: Vec<char>;
-        let mut line_tokens: Vec<Token> = vec!();
-        while i < line_split.len() {
-            string_token = line_split[i].clone();
-            // Converts string token to enum Token
-            match string_token.as_str() {
-                "@" => line_tokens.push(Token::Tag),
-                "(" => line_tokens.push(Token::LBrace),
-                ")" => line_tokens.push(Token::RBrace),
-                "{" => line_tokens.push(Token::LCurlyBrace),
-                "}" => line_tokens.push(Token::RCurlyBrace),
-                "[" => line_tokens.push(Token::LSquareBrace),
-                "]" => line_tokens.push(Token::RSquareBrace),
-                "enum" => line_tokens.push(Token::Enum),
-                ";" => {}
-                "." => line_tokens.push(Token::Period),
-                "," => line_tokens.push(Token::Comma),
-                "while" => line_tokens.push(Token::While),
-                "for" => line_tokens.push(Token::For),
-                "if" => line_tokens.push(Token::If),
-                "else" => line_tokens.push(Token::Else),
-                "_" => line_tokens.push(Token::DiscardVar),
-                "::" => line_tokens.push(Token::ScopeResolution),
-                "=" => line_tokens.push(Token::Assignment),
-                "!" => line_tokens.push(Token::ExclamationMark),
-                "*" => line_tokens.push(Token::Star),
-                "!=" => line_tokens.push(Token::LogicalNotEqual),
-                "<=" => line_tokens.push(Token::LessThanOrEqual),
-                ">=" => line_tokens.push(Token::MoreThanOrEqual),
-                "<" => line_tokens.push(Token::LessThan),
-                ">" => line_tokens.push(Token::GreaterThan),
-                "->" => line_tokens.push(Token::Assignment),
-                "+=" => line_tokens.push(Token::PlusEqual),
-                "-=" => line_tokens.push(Token::MinusEqual),
-                "++" => line_tokens.push(Token::PlusPlus),
-                "pub" => line_tokens.push(Token::Pub),
-                "true" => line_tokens.push(Token::LogicalTrue),
-                "false" => line_tokens.push(Token::LogicalFalse),
-                ":" => line_tokens.push(Token::Colon),
-                "new" => line_tokens.push(Token::New),
-                "" => (),
-                _ => {
-                    char_token = string_token.chars().collect();
-                    //@ Extra checking to not pull out the tag keywords in things like variables
-                    if line_tokens.len() != 0 && line_tokens[line_tokens.len() - 1] == Token::Tag { 
-                        match string_token.as_str() {
-                            "pkg" => line_tokens.push(Token::Package),
-                            "import" => line_tokens.push(Token::Import),
-                            "use" => line_tokens.push(Token::Use),
-                            _ => error_handler::error::error_reporter(error_handler::Error::new(
-                                String::from("Tag matching"), line_local.actual_line_num as i32, format!("Invalid tag: {}", string_token), line_text.iter().collect(),
-                            ))
-                        }
-                    } else if char_token[0] == '"' || char_token[0] == '\'' { //String
-                        char_token.remove(0);
-                        char_token.pop();
-                        line_tokens.push(Token::String(char_token.iter().collect()));
-                    } else if char_token[0].is_digit(10) { //Number
-                        if string_token.contains('.') { //Float
-                            match string_token.parse::<f32>() {
-                                Ok(val) => line_tokens.push(Token::Float(val)),
-                                Err(why) => error_handler::error::error_reporter(error_handler::Error::new(
-                                    String::from("Float parsing"), line_local.actual_line_num as i32, format!("Invalid float {} Error: {}", string_token, why), line_text.iter().collect(),
-                                ))
+                match char {
+                    '/' => {
+                        i += 1;
+                        match chars[i] {
+                            '/' => {
+                                if token != String::new() {
+                                    tokens.push(ParsedToken {
+                                        token: get_token(&token).unwrap_or_else(|| {
+                                            error_reporter(Error::new(
+                                                path.to_owned(),
+                                                line,
+                                                format!("Unidentified token: {}", token),
+                                                lines[(line - 1) as usize].to_string()));
+                                            exit(1);
+                                        }),
+                                        line,
+                                        char: start_char,
+                                    });
+                                }
+                                while chars[i] != '\n' {
+                                    i += 1;
+                                }
+                                line += 1;
+                                token = String::new();
                             }
-                        } else { 
-                            // Int
-                            match string_token.parse::<i32>() {
-                                Ok(val) => line_tokens.push(Token::Int(val)),
-                                Err(why) => error_handler::error::error_reporter(error_handler::Error::new(
-                                    String::from("Int parsing"),
-                                    line_local.actual_line_num as i32,
-                                    format!("Invalid int {} Error: {}", string_token, why),
-                                    line_text.iter().collect(),
-                                ))
+                            '*' => {
+                                println!("Found multiline comment");
+                                if token != String::new() {
+                                    tokens.push(ParsedToken {
+                                        token: get_token(&token).unwrap_or_else(|| {
+                                            error_reporter(Error::new(
+                                                path.to_owned(),
+                                                line,
+                                                format!("Unidentified token: {}", token),
+                                                lines[(line - 1) as usize].to_string()));
+                                            exit(1);
+                                        }),
+                                        line,
+                                        char: start_char,
+                                    });
+                                }
+                                ml_comment = true;
+                                token = String::new();
+                            }
+                            _ => {
+                                error_reporter(Error::new(
+                                    path.to_owned(),
+                                    line,
+                                    format!("Unidentified token: {}", token),
+                                    lines[(line - 1) as usize].to_string()));
                             }
                         }
-                    } else { //Must be a variable
-                        line_tokens.push(Token::Identifier(string_token));
                     }
+                    '\n' => {
+                        line += 1;
+                        if token != String::new() {
+                            tokens.push(ParsedToken {
+                                token: get_token(&token).unwrap_or_else(|| {
+                                    error_reporter(Error::new(
+                                        path.to_owned(),
+                                        line,
+                                        format!("Unidentified token: {}", token),
+                                        lines[(line - 1) as usize].to_string()));
+                                    exit(1);
+                                }),
+                                line,
+                                char: start_char,
+                            });
+                            token = String::new();
+                        }
+                        tok_char = 0;
+                        start_char = 0;
+                    }
+                    '"' => {
+                        if token != String::new() {
+                            tokens.push(ParsedToken {
+                                token: get_token(&token).unwrap_or_else(|| {
+                                    error_reporter(Error::new(
+                                        path.to_owned(),
+                                        line,
+                                        format!("Unidentified token: {}", token),
+                                        lines[(line - 1) as usize].to_string()));
+                                    exit(1);
+                                }),
+                                line,
+                                char: start_char,
+                            });
+                            token = String::new();
+                        }
+                        start_char = tok_char;
+                        read_string = true;
+                    }
+                    ';' => {
+                        if token != String::new() {
+                            tokens.push(ParsedToken {
+                                token: get_token(&token).unwrap_or_else(|| {
+                                    error_reporter(Error::new(
+                                        path.to_owned(),
+                                        line,
+                                        format!("Unidentified token: {}", token),
+                                        lines[(line - 1) as usize].to_string()));
+                                    exit(1);
+                                }),
+                                line,
+                                char: start_char,
+                            });
+                        }
+                        tokens.push(ParsedToken { token: Token::SemiColon, line, char: tok_char });
+                        start_char = tok_char;
+                        token = String::new();
+                    }
+                    '*' => {
+                        if token != String::new() {
+                            tokens.push(ParsedToken {
+                                token: get_token(&token).unwrap_or_else(|| {
+                                    error_reporter(Error::new(
+                                        path.to_owned(),
+                                        line,
+                                        format!("Unidentified token: {}", token),
+                                        lines[(line - 1) as usize].to_string()));
+                                    exit(1);
+                                }),
+                                line,
+                                char: start_char,
+                            });
+                        }
+                        tokens.push(ParsedToken { token: Token::Star, line, char: tok_char });
+                        start_char = tok_char + 1;
+                        token = String::new();
+                    }
+                    '_' => {
+                        if token != String::new() {
+                            tokens.push(ParsedToken {
+                                token: get_token(&token).unwrap_or_else(|| {
+                                    error_reporter(Error::new(
+                                        path.to_owned(),
+                                        line,
+                                        format!("Unidentified token: {}", token),
+                                        lines[(line - 1) as usize].to_string()));
+                                    exit(1);
+                                }),
+                                line,
+                                char: start_char,
+                            });
+                        }
+                        tokens.push(ParsedToken { token: Token::DiscardVar, line, char: tok_char });
+                        start_char = tok_char + 1;
+                        token = String::new();
+                    }
+                    '(' => {
+                        if token != String::new() {
+                            tokens.push(ParsedToken {
+                                token: get_token(&token).unwrap_or_else(|| {
+                                    error_reporter(Error::new(
+                                        path.to_owned(),
+                                        line,
+                                        format!("Unidentified token: {}", token),
+                                        lines[(line - 1) as usize].to_string()));
+                                    exit(1);
+                                }),
+                                line,
+                                char: start_char,
+                            });
+                        }
+                        tokens.push(ParsedToken { token: Token::LBrace, line, char: tok_char });
+                        start_char = tok_char + 1;
+                        token = String::new();
+                    }
+                    ')' => {
+                        if token != String::new() {
+                            tokens.push(ParsedToken {
+                                token: get_token(&token).unwrap_or_else(|| {
+                                    error_reporter(Error::new(
+                                        path.to_owned(),
+                                        line,
+                                        format!("Unidentified token: {}", token),
+                                        lines[(line - 1) as usize].to_string()));
+                                    exit(1);
+                                }),
+                                line,
+                                char: start_char,
+                            });
+                        }
+                        tokens.push(ParsedToken { token: Token::RBrace, line, char: tok_char });
+                        start_char = tok_char + 1;
+                        token = String::new();
+                    }
+                    '{' => {
+                        if token != String::new() {
+                            tokens.push(ParsedToken {
+                                token: get_token(&token).unwrap_or_else(|| {
+                                    error_reporter(Error::new(
+                                        path.to_owned(),
+                                        line,
+                                        format!("Unidentified token: {}", token),
+                                        lines[(line - 1) as usize].to_string()));
+                                    exit(1);
+                                }),
+                                line,
+                                char: start_char,
+                            });
+                        }
+                        tokens.push(ParsedToken { token: Token::LCurlyBrace, line, char: tok_char });
+                        start_char = tok_char + 1;
+                        token = String::new();
+                    }
+                    '}' => {
+                        if token != String::new() {
+                            tokens.push(ParsedToken {
+                                token: get_token(&token).unwrap_or_else(|| {
+                                    error_reporter(Error::new(
+                                        path.to_owned(),
+                                        line,
+                                        format!("Unidentified token: {}", token),
+                                        lines[(line - 1) as usize].to_string()));
+                                    exit(1);
+                                }),
+                                line,
+                                char: start_char,
+                            });
+                        }
+                        tokens.push(ParsedToken { token: Token::RCurlyBrace, line, char: tok_char });
+                        start_char = tok_char + 1;
+                        token = String::new();
+                    }
+                    '[' => {
+                        if token != String::new() {
+                            tokens.push(ParsedToken {
+                                token: get_token(&token).unwrap_or_else(|| {
+                                    error_reporter(Error::new(
+                                        path.to_owned(),
+                                        line,
+                                        format!("Unidentified token: {}", token),
+                                        lines[(line - 1) as usize].to_string()));
+                                    exit(1);
+                                }),
+                                line,
+                                char: start_char,
+                            });
+                        }
+                        tokens.push(ParsedToken { token: Token::LSquareBrace, line, char: tok_char });
+                        start_char = tok_char + 1;
+                        token = String::new();
+                    }
+                    ']' => {
+                        if token != String::new() {
+                            tokens.push(ParsedToken {
+                                token: get_token(&token).unwrap_or_else(|| {
+                                    error_reporter(Error::new(
+                                        path.to_owned(),
+                                        line,
+                                        format!("Unidentified token: {}", token),
+                                        lines[(line - 1) as usize].to_string()));
+                                    exit(1);
+                                }),
+                                line,
+                                char: start_char,
+                            });
+                        }
+                        tokens.push(ParsedToken { token: Token::RSquareBrace, line, char: tok_char });
+                        start_char = tok_char + 1;
+                        token = String::new();
+                    }
+                    '.' => {
+                        if token != String::new() {
+                            tokens.push(ParsedToken {
+                                token: get_token(&token).unwrap_or_else(|| {
+                                    error_reporter(Error::new(
+                                        path.to_owned(),
+                                        line,
+                                        format!("Unidentified token: {}", token),
+                                        lines[(line - 1) as usize].to_string()));
+                                    exit(1);
+                                }),
+                                line,
+                                char: start_char,
+                            });
+                        }
+                        tokens.push(ParsedToken { token: Token::Period, line, char: tok_char });
+                        start_char = tok_char + 1;
+                        token = String::new();
+                    }
+                    ',' => {
+                        if token != String::new() {
+                            tokens.push(ParsedToken {
+                                token: get_token(&token).unwrap_or_else(|| {
+                                    error_reporter(Error::new(
+                                        path.to_owned(),
+                                        line,
+                                        format!("Unidentified token: {}", token),
+                                        lines[(line - 1) as usize].to_string()));
+                                    exit(1);
+                                }),
+                                line,
+                                char: start_char,
+                            });
+                        }
+                        tokens.push(ParsedToken { token: Token::Comma, line, char: tok_char });
+                        start_char = tok_char + 1;
+                        token = String::new();
+                    }
+                    ' ' => {
+                        if token != String::new() {
+                            tokens.push(ParsedToken {
+                                token: get_token(&token).unwrap_or_else(|| {
+                                    error_reporter(Error::new(
+                                        path.to_owned(),
+                                        line,
+                                        format!("Unidentified token: {}", token),
+                                        lines[(line - 1) as usize].to_string()));
+                                    exit(1);
+                                }),
+                                line,
+                                char: start_char,
+                            });
+                        }
+                        start_char = tok_char + 1;
+                        token = String::new();
+                    }
+                    '=' => {
+                        if token != String::new() {
+                            tokens.push(ParsedToken {
+                                token: get_token(&token).unwrap_or_else(|| {
+                                    error_reporter(Error::new(
+                                        path.to_owned(),
+                                        line,
+                                        format!("Unidentified token: {}", token),
+                                        lines[(line - 1) as usize].to_string()));
+                                    exit(1);
+                                }),
+                                line,
+                                char: start_char,
+                            });
+                        }
+                        tokens.push(ParsedToken { token: Token::Equal, line, char: tok_char });
+                        start_char = tok_char + 1;
+                        token = String::new();
+                    }
+                    ':' => {
+                        i += 1;
+                        match chars[i] {
+                            ':' => {
+                                if token != String::new() {
+                                    tokens.push(ParsedToken {
+                                        token: get_token(&token).unwrap_or_else(|| {
+                                            error_reporter(Error::new(
+                                                path.to_owned(),
+                                                line,
+                                                format!("Unidentified token: {}", token),
+                                                lines[(line - 1) as usize].to_string()));
+                                            exit(1);
+                                        }),
+                                        line,
+                                        char: start_char,
+                                    });
+                                }
+                                tokens.push(ParsedToken { token: Token::ScopeResolution, line, char: tok_char });
+                                start_char = tok_char + 2;
+                                token = String::new();
+                            }
+                            _ => {
+                                if token != String::new() {
+                                    tokens.push(ParsedToken {
+                                        token: get_token(&token).unwrap_or_else(|| {
+                                            error_reporter(Error::new(
+                                                path.to_owned(),
+                                                line,
+                                                format!("Unidentified token: {}", token),
+                                                lines[(line - 1) as usize].to_string()));
+                                            exit(1);
+                                        }),
+                                        line,
+                                        char: start_char,
+                                    });
+                                }
+                                tokens.push(ParsedToken { token: Token::Colon, line, char: tok_char });
+                                start_char = tok_char + 1;
+                                token = String::new();
+                                i -= 1;
+                            }
+                        }
+                    }
+                    '!' => {
+                        i += 1;
+                        match chars[i] {
+                            '=' => {
+                                if token != String::new() {
+                                    tokens.push(ParsedToken {
+                                        token: get_token(&token).unwrap_or_else(|| {
+                                            error_reporter(Error::new(
+                                                path.to_owned(),
+                                                line,
+                                                format!("Unidentified token: {}", token),
+                                                lines[(line - 1) as usize].to_string()));
+                                            exit(1);
+                                        }),
+                                        line,
+                                        char: start_char,
+                                    });
+                                }
+                                tokens.push(ParsedToken { token: Token::LogicalNotEqual, line, char: tok_char });
+                                start_char = tok_char + 2;
+                                token = String::new();
+                            }
+                            _ => {
+                                if token != String::new() {
+                                    tokens.push(ParsedToken {
+                                        token: get_token(&token).unwrap_or_else(|| {
+                                            error_reporter(Error::new(
+                                                path.to_owned(),
+                                                line,
+                                                format!("Unidentified token: {}", token),
+                                                lines[(line - 1) as usize].to_string()));
+                                            exit(1);
+                                        }),
+                                        line,
+                                        char: start_char,
+                                    });
+                                }
+                                tokens.push(ParsedToken { token: Token::ExclamationMark, line, char: tok_char });
+                                start_char = tok_char + 1;
+                                token = String::new();
+                                i -= 1;
+                            }
+                        }
+                    }
+                    '&' => {
+                        i += 1;
+                        match chars[i] {
+                            '&' => {
+                                if token != String::new() {
+                                    tokens.push(ParsedToken {
+                                        token: get_token(&token).unwrap_or_else(|| {
+                                            error_reporter(Error::new(
+                                                path.to_owned(),
+                                                line,
+                                                format!("Unidentified token: {}", token),
+                                                lines[(line - 1) as usize].to_string()));
+                                            exit(1);
+                                        }),
+                                        line,
+                                        char: start_char,
+                                    });
+                                }
+                                tokens.push(ParsedToken { token: Token::LogicalAnd, line, char: tok_char });
+                                start_char = tok_char + 2;
+                                token = String::new();
+                            }
+                            _ => {
+                                if token != String::new() {
+                                    tokens.push(ParsedToken {
+                                        token: get_token(&token).unwrap_or_else(|| {
+                                            error_reporter(Error::new(
+                                                path.to_owned(),
+                                                line,
+                                                format!("Unidentified token: {}", token),
+                                                lines[(line - 1) as usize].to_string()));
+                                            exit(1);
+                                        }),
+                                        line,
+                                        char: start_char,
+                                    });
+                                }
+                                tokens.push(ParsedToken { token: Token::Ampersand, line, char: tok_char });
+                                start_char = tok_char + 1;
+                                token = String::new();
+                                i -= 1;
+                            }
+                        }
+                    }
+                    '|' => {
+                        i += 1;
+                        match chars[i] {
+                            '|' => {
+                                if token != String::new() {
+                                    tokens.push(ParsedToken {
+                                        token: get_token(&token).unwrap_or_else(|| {
+                                            error_reporter(Error::new(
+                                                path.to_owned(),
+                                                line,
+                                                format!("Unidentified token: {}", token),
+                                                lines[(line - 1) as usize].to_string()));
+                                            exit(1);
+                                        }),
+                                        line,
+                                        char: start_char,
+                                    });
+                                }
+                                tokens.push(ParsedToken { token: Token::LogicalOr, line, char: tok_char });
+                                start_char = tok_char + 2;
+                                token = String::new();
+                            }
+                            _ => {
+                                if token != String::new() {
+                                    tokens.push(ParsedToken {
+                                        token: get_token(&token).unwrap_or_else(|| {
+                                            error_reporter(Error::new(
+                                                path.to_owned(),
+                                                line,
+                                                format!("Unidentified token: {}", token),
+                                                lines[(line - 1) as usize].to_string()));
+                                            exit(1);
+                                        }),
+                                        line,
+                                        char: start_char,
+                                    });
+                                }
+                                tokens.push(ParsedToken { token: Token::Pipe, line, char: tok_char });
+                                start_char = tok_char + 1;
+                                token = String::new();
+                                i -= 1;
+                            }
+                        }
+                    }
+                    '+' => {
+                        i += 1;
+                        match chars[i] {
+                            '=' => {
+                                if token != String::new() {
+                                    tokens.push(ParsedToken {
+                                        token: get_token(&token).unwrap_or_else(|| {
+                                            error_reporter(Error::new(
+                                                path.to_owned(),
+                                                line,
+                                                format!("Unidentified token: {}", token),
+                                                lines[(line - 1) as usize].to_string()));
+                                            exit(1);
+                                        }),
+                                        line,
+                                        char: start_char,
+                                    });
+                                }
+                                tokens.push(ParsedToken { token: Token::PlusEqual, line, char: tok_char });
+                                start_char = tok_char + 2;
+                                token = String::new();
+                            }
+                            '+' => {
+                                if token != String::new() {
+                                    tokens.push(ParsedToken {
+                                        token: get_token(&token).unwrap_or_else(|| {
+                                            error_reporter(Error::new(
+                                                path.to_owned(),
+                                                line,
+                                                format!("Unidentified token: {}", token),
+                                                lines[(line - 1) as usize].to_string()));
+                                            exit(1);
+                                        }),
+                                        line,
+                                        char: start_char,
+                                    });
+                                }
+                                tokens.push(ParsedToken { token: Token::PlusPlus, line, char: tok_char });
+                                start_char = tok_char + 2;
+                                token = String::new();
+                            }
+                            _ => {
+                                if token != String::new() {
+                                    tokens.push(ParsedToken {
+                                        token: get_token(&token).unwrap_or_else(|| {
+                                            error_reporter(Error::new(
+                                                path.to_owned(),
+                                                line,
+                                                format!("Unidentified token: {}", token),
+                                                lines[(line - 1) as usize].to_string()));
+                                            exit(1);
+                                        }),
+                                        line,
+                                        char: start_char,
+                                    });
+                                }
+                                tokens.push(ParsedToken { token: Token::Plus, line, char: tok_char });
+                                start_char = tok_char + 2;
+                                token = String::new();
+                                i -= 1;
+                            }
+                        }
+                    }
+                    '-' => {
+                        i += 1;
+                        match chars[i] {
+                            '=' => {
+                                if token != String::new() {
+                                    tokens.push(ParsedToken {
+                                        token: get_token(&token).unwrap_or_else(|| {
+                                            error_reporter(Error::new(
+                                                path.to_owned(),
+                                                line,
+                                                format!("Unidentified token: {}", token),
+                                                lines[(line - 1) as usize].to_string()));
+                                            exit(1);
+                                        }),
+                                        line,
+                                        char: start_char,
+                                    });
+                                }
+                                tokens.push(ParsedToken { token: Token::MinusEqual, line, char: tok_char });
+                                start_char = tok_char + 2;
+                                token = String::new();
+                            }
+                            '-' => {
+                                if token != String::new() {
+                                    tokens.push(ParsedToken {
+                                        token: get_token(&token).unwrap_or_else(|| {
+                                            error_reporter(Error::new(
+                                                path.to_owned(),
+                                                line,
+                                                format!("Unidentified token: {}", token),
+                                                lines[(line - 1) as usize].to_string()));
+                                            exit(1);
+                                        }),
+                                        line,
+                                        char: start_char,
+                                    });
+                                }
+                                tokens.push(ParsedToken { token: Token::MinusMinus, line, char: tok_char });
+                                start_char = tok_char + 2;
+                                token = String::new();
+                            }
+                            '>' => {
+                                if token != String::new() {
+                                    tokens.push(ParsedToken {
+                                        token: get_token(&token).unwrap_or_else(|| {
+                                            error_reporter(Error::new(
+                                                path.to_owned(),
+                                                line,
+                                                format!("Unidentified token: {}", token),
+                                                lines[(line - 1) as usize].to_string()));
+                                            exit(1);
+                                        }),
+                                        line,
+                                        char: start_char,
+                                    });
+                                }
+                                tokens.push(ParsedToken { token: Token::Arrow, line, char: tok_char });
+                                start_char = tok_char + 2;
+                                token = String::new();
+                            }
+                            _ => {
+                                if token != String::new() {
+                                    tokens.push(ParsedToken {
+                                        token: get_token(&token).unwrap_or_else(|| {
+                                            error_reporter(Error::new(
+                                                path.to_owned(),
+                                                line,
+                                                format!("Unidentified token: {}", token),
+                                                lines[(line - 1) as usize].to_string()));
+                                            exit(1);
+                                        }),
+                                        line,
+                                        char: start_char,
+                                    });
+                                }
+                                tokens.push(ParsedToken { token: Token::Minus, line, char: tok_char });
+                                start_char = tok_char + 1;
+                                token = String::new();
+                                i -= 1;
+                            }
+                        }
+                    }
+
+                    '>' => {
+                        i += 1;
+                        match chars[i] {
+                            '=' => {
+                                if token != String::new() {
+                                    tokens.push(ParsedToken {
+                                        token: get_token(&token).unwrap_or_else(|| {
+                                            error_reporter(Error::new(
+                                                path.to_owned(),
+                                                line,
+                                                format!("Unidentified token: {}", token),
+                                                lines[(line - 1) as usize].to_string()));
+                                            exit(1);
+                                        }),
+                                        line,
+                                        char: start_char,
+                                    });
+                                }
+                                tokens.push(ParsedToken { token: Token::GreaterThanOrEqual, line, char: tok_char });
+                                start_char = tok_char + 1;
+                                token = String::new();
+                            }
+                            _ => {
+                                if token != String::new() {
+                                    tokens.push(ParsedToken {
+                                        token: get_token(&token).unwrap_or_else(|| {
+                                            error_reporter(Error::new(
+                                                path.to_owned(),
+                                                line,
+                                                format!("Unidentified token: {}", token),
+                                                lines[(line - 1) as usize].to_string()));
+                                            exit(1);
+                                        }),
+                                        line,
+                                        char: start_char,
+                                    });
+                                }
+                                tokens.push(ParsedToken { token: Token::GreaterThan, line, char: tok_char });
+                                start_char = tok_char + 1;
+                                token = String::new();
+                                i -= 1;
+                            }
+                        }
+                    }
+                    '<' => {
+                        i += 1;
+                        match chars[i] {
+                            '=' => {
+                                if token != String::new() {
+                                    tokens.push(ParsedToken {
+                                        token: get_token(&token).unwrap_or_else(|| {
+                                            error_reporter(Error::new(
+                                                path.to_owned(),
+                                                line,
+                                                format!("Unidentified token: {}", token),
+                                                lines[(line - 1) as usize].to_string()));
+                                            exit(1);
+                                        }),
+                                        line,
+                                        char: start_char,
+                                    });
+                                }
+                                tokens.push(ParsedToken { token: Token::LessThanOrEqual, line, char: tok_char });
+                                start_char = tok_char + 1;
+                                token = String::new();
+                            }
+                            _ => {
+                                if token != String::new() {
+                                    tokens.push(ParsedToken {
+                                        token: get_token(&token).unwrap_or_else(|| {
+                                            error_reporter(Error::new(
+                                                path.to_owned(),
+                                                line,
+                                                format!("Unidentified token: {}", token),
+                                                lines[(line - 1) as usize].to_string()));
+                                            exit(1);
+                                        }),
+                                        line,
+                                        char: start_char,
+                                    });
+                                }
+                                tokens.push(ParsedToken { token: Token::LessThan, line, char: tok_char });
+                                start_char = tok_char + 1;
+                                token = String::new();
+                                i -= 1;
+                            }
+                        }
+                    }
+                    _ => token += char.encode_utf8(&mut tmp),
                 }
-            };
+            }
+
+            tok_char += 1;
             i += 1;
         }
-        //Everything should be done by now | Save shit in mutex that can't be poisoned
-        line_local.line_token = line_tokens;
-        let mut mutex_lines_data = lines_data.lock().unwrap();
-        while mutex_lines_data.len() <= line_local.line_num { mutex_lines_data.push(Line::new()) }
-        mutex_lines_data[line_local.line_num] = line_local.clone();
-        channel_thread_tx.send(0).unwrap();
-    }).unwrap();
-    return handle;
+
+        ParsedFile { path: path.to_owned(), source: source.to_owned(), tokens }
+    }
+}
+
+/// Structure for storing a single token
+/// # Fields
+/// - `token`: The token
+/// - `line`: The line in source it was found on
+/// - `char`: The position of the first character in source
+#[derive(Clone, Debug)]
+pub struct ParsedToken {
+    pub token: Token,
+    pub line: i32,
+    pub char: i32,
+}
+
+fn get_token(source: &String) -> Option<Token> {
+    println!("{}", source);
+    if Regex::new("[a-zA-Z]([0-9a-zA-Z_]+)?").unwrap().is_match(source) {
+        Some(Token::Identifier(source.to_owned()))
+    } else if Regex::new("[0-9]+").unwrap().is_match(source) {
+        Some(Token::Int(source.parse::<i32>().unwrap()))
+    } else if Regex::new("[0-9].[0-9]+").unwrap().is_match(source) {
+        Some(Token::Float(source.parse::<f32>().unwrap()))
+    } else if Regex::new("@[a-zA-Z]+").unwrap().is_match(source) {
+        Some(Token::Tag(source.replace("@", "")))
+    } else if source == "pub" {
+        Some(Token::Pub)
+    } else if source == "while" {
+        Some(Token::While)
+    } else if source == "enum" {
+        Some(Token::Enum)
+    } else if source == "if" {
+        Some(Token::If)
+    } else if source == "else" {
+        Some(Token::Else)
+    } else if source == "true" {
+        Some(Token::LogicalTrue)
+    } else if source == "false" {
+        Some(Token::LogicalFalse)
+    } else if source == "new" {
+        Some(Token::New)
+    } else if source == "while" {
+        Some(Token::While)
+    } else if source == "loop" {
+        Some(Token::Loop)
+    } else if source == "for" {
+        Some(Token::For)
+    } else {
+        None
+    }
 }
