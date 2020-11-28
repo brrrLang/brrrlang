@@ -4,7 +4,8 @@ use std::io::prelude::*;
 use clap::{App, SubCommand};
 use ansi_term::Color;
 use std::path::PathBuf;
-use std::panic::catch_unwind;
+use std::panic::{catch_unwind, set_hook, take_hook};
+use std::mem::take;
 
 mod token;
 mod config;
@@ -47,11 +48,11 @@ fn compile() {
             let path = path.unwrap().path();
             let path_str = path.file_name().unwrap().to_str().unwrap().to_string();
             let source = read_file(&path).unwrap();
-            match catch_unwind(|| token::tokenizer::ParsedFile::new(&source, &path_str)) {
-                Ok(parsed) => sender.send(parsed).unwrap(),
-                Err(_) => {}
-            }
 
+            match token::tokenizer::ParsedFile::new(&source, &path_str) {
+                Some(parsed) => sender.send(parsed).unwrap(),
+                _ => {}
+            }
         });
     }
 
