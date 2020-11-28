@@ -2,7 +2,7 @@
 
 @import "Std";
 
-@use Std::IO::[ReadLine, PrintLine, StrErr];
+@use Std::IO::[ReadLine, PrintLine, StdErr];
 @use Std::String::[StrParse, StrFmt];
 
 () {

@@ -62,21 +62,24 @@ impl ParsedFile {
 
 
             if read_string {
-                token += char.encode_utf8(&mut tmp);
                 if char == '"' {
                     tokens.push(ParsedToken { token: Token::String(token.clone()), line, char: start_char });
                     token = String::new();
                     read_string = false;
                     start_char = tok_char;
+                    i += 1;
+                    continue;
                 } else if char == '\n' {
                     line += 1;
                     tok_char = 0;
                 }
+                token += char.encode_utf8(&mut tmp);
             } else if ml_comment {
+                println!("{}, {}", char, chars[i + 1]);
                 if char == '*' && chars[i + 1] == '/' {
+                    println!("Multiline finished");
                     ml_comment = false;
                 }
-                i += 1;
             } else {
                 match char {
                     '/' => {
@@ -91,7 +94,7 @@ impl ParsedFile {
                                                 line,
                                                 format!("Unidentified token: {}", token),
                                                 lines[(line - 1) as usize].to_string()));
-                                            exit(1);
+                                            panic!();
                                         }),
                                         line,
                                         char: start_char,
@@ -104,7 +107,6 @@ impl ParsedFile {
                                 token = String::new();
                             }
                             '*' => {
-                                println!("Found multiline comment");
                                 if token != String::new() {
                                     tokens.push(ParsedToken {
                                         token: get_token(&token).unwrap_or_else(|| {
@@ -113,7 +115,7 @@ impl ParsedFile {
                                                 line,
                                                 format!("Unidentified token: {}", token),
                                                 lines[(line - 1) as usize].to_string()));
-                                            exit(1);
+                                            panic!();
                                         }),
                                         line,
                                         char: start_char,
@@ -141,7 +143,7 @@ impl ParsedFile {
                                         line,
                                         format!("Unidentified token: {}", token),
                                         lines[(line - 1) as usize].to_string()));
-                                    exit(1);
+                                    panic!();
                                 }),
                                 line,
                                 char: start_char,
@@ -160,7 +162,7 @@ impl ParsedFile {
                                         line,
                                         format!("Unidentified token: {}", token),
                                         lines[(line - 1) as usize].to_string()));
-                                    exit(1);
+                                    panic!();
                                 }),
                                 line,
                                 char: start_char,
@@ -179,7 +181,7 @@ impl ParsedFile {
                                         line,
                                         format!("Unidentified token: {}", token),
                                         lines[(line - 1) as usize].to_string()));
-                                    exit(1);
+                                    panic!();
                                 }),
                                 line,
                                 char: start_char,
@@ -198,7 +200,7 @@ impl ParsedFile {
                                         line,
                                         format!("Unidentified token: {}", token),
                                         lines[(line - 1) as usize].to_string()));
-                                    exit(1);
+                                    panic!();
                                 }),
                                 line,
                                 char: start_char,
@@ -217,7 +219,7 @@ impl ParsedFile {
                                         line,
                                         format!("Unidentified token: {}", token),
                                         lines[(line - 1) as usize].to_string()));
-                                    exit(1);
+                                    panic!();
                                 }),
                                 line,
                                 char: start_char,
@@ -236,7 +238,7 @@ impl ParsedFile {
                                         line,
                                         format!("Unidentified token: {}", token),
                                         lines[(line - 1) as usize].to_string()));
-                                    exit(1);
+                                    panic!();
                                 }),
                                 line,
                                 char: start_char,
@@ -255,7 +257,7 @@ impl ParsedFile {
                                         line,
                                         format!("Unidentified token: {}", token),
                                         lines[(line - 1) as usize].to_string()));
-                                    exit(1);
+                                    panic!();
                                 }),
                                 line,
                                 char: start_char,
@@ -274,7 +276,7 @@ impl ParsedFile {
                                         line,
                                         format!("Unidentified token: {}", token),
                                         lines[(line - 1) as usize].to_string()));
-                                    exit(1);
+                                    panic!();
                                 }),
                                 line,
                                 char: start_char,
@@ -293,7 +295,7 @@ impl ParsedFile {
                                         line,
                                         format!("Unidentified token: {}", token),
                                         lines[(line - 1) as usize].to_string()));
-                                    exit(1);
+                                    panic!();
                                 }),
                                 line,
                                 char: start_char,
@@ -312,7 +314,7 @@ impl ParsedFile {
                                         line,
                                         format!("Unidentified token: {}", token),
                                         lines[(line - 1) as usize].to_string()));
-                                    exit(1);
+                                    panic!();
                                 }),
                                 line,
                                 char: start_char,
@@ -331,7 +333,7 @@ impl ParsedFile {
                                         line,
                                         format!("Unidentified token: {}", token),
                                         lines[(line - 1) as usize].to_string()));
-                                    exit(1);
+                                    panic!();
                                 }),
                                 line,
                                 char: start_char,
@@ -350,7 +352,7 @@ impl ParsedFile {
                                         line,
                                         format!("Unidentified token: {}", token),
                                         lines[(line - 1) as usize].to_string()));
-                                    exit(1);
+                                    panic!();
                                 }),
                                 line,
                                 char: start_char,
@@ -369,7 +371,7 @@ impl ParsedFile {
                                         line,
                                         format!("Unidentified token: {}", token),
                                         lines[(line - 1) as usize].to_string()));
-                                    exit(1);
+                                    panic!();
                                 }),
                                 line,
                                 char: start_char,
@@ -388,7 +390,7 @@ impl ParsedFile {
                                         line,
                                         format!("Unidentified token: {}", token),
                                         lines[(line - 1) as usize].to_string()));
-                                    exit(1);
+                                    panic!();
                                 }),
                                 line,
                                 char: start_char,
@@ -406,7 +408,7 @@ impl ParsedFile {
                                         line,
                                         format!("Unidentified token: {}", token),
                                         lines[(line - 1) as usize].to_string()));
-                                    exit(1);
+                                    panic!();
                                 }),
                                 line,
                                 char: start_char,
@@ -428,7 +430,7 @@ impl ParsedFile {
                                                 line,
                                                 format!("Unidentified token: {}", token),
                                                 lines[(line - 1) as usize].to_string()));
-                                            exit(1);
+                                            panic!();
                                         }),
                                         line,
                                         char: start_char,
@@ -447,7 +449,7 @@ impl ParsedFile {
                                                 line,
                                                 format!("Unidentified token: {}", token),
                                                 lines[(line - 1) as usize].to_string()));
-                                            exit(1);
+                                            panic!();
                                         }),
                                         line,
                                         char: start_char,
@@ -472,7 +474,7 @@ impl ParsedFile {
                                                 line,
                                                 format!("Unidentified token: {}", token),
                                                 lines[(line - 1) as usize].to_string()));
-                                            exit(1);
+                                            panic!();
                                         }),
                                         line,
                                         char: start_char,
@@ -491,7 +493,7 @@ impl ParsedFile {
                                                 line,
                                                 format!("Unidentified token: {}", token),
                                                 lines[(line - 1) as usize].to_string()));
-                                            exit(1);
+                                            panic!();
                                         }),
                                         line,
                                         char: start_char,
@@ -516,7 +518,7 @@ impl ParsedFile {
                                                 line,
                                                 format!("Unidentified token: {}", token),
                                                 lines[(line - 1) as usize].to_string()));
-                                            exit(1);
+                                            panic!();
                                         }),
                                         line,
                                         char: start_char,
@@ -535,7 +537,7 @@ impl ParsedFile {
                                                 line,
                                                 format!("Unidentified token: {}", token),
                                                 lines[(line - 1) as usize].to_string()));
-                                            exit(1);
+                                            panic!();
                                         }),
                                         line,
                                         char: start_char,
@@ -560,7 +562,7 @@ impl ParsedFile {
                                                 line,
                                                 format!("Unidentified token: {}", token),
                                                 lines[(line - 1) as usize].to_string()));
-                                            exit(1);
+                                            panic!();
                                         }),
                                         line,
                                         char: start_char,
@@ -579,7 +581,7 @@ impl ParsedFile {
                                                 line,
                                                 format!("Unidentified token: {}", token),
                                                 lines[(line - 1) as usize].to_string()));
-                                            exit(1);
+                                            panic!();
                                         }),
                                         line,
                                         char: start_char,
@@ -604,7 +606,7 @@ impl ParsedFile {
                                                 line,
                                                 format!("Unidentified token: {}", token),
                                                 lines[(line - 1) as usize].to_string()));
-                                            exit(1);
+                                            panic!();
                                         }),
                                         line,
                                         char: start_char,
@@ -623,7 +625,7 @@ impl ParsedFile {
                                                 line,
                                                 format!("Unidentified token: {}", token),
                                                 lines[(line - 1) as usize].to_string()));
-                                            exit(1);
+                                            panic!();
                                         }),
                                         line,
                                         char: start_char,
@@ -642,7 +644,7 @@ impl ParsedFile {
                                                 line,
                                                 format!("Unidentified token: {}", token),
                                                 lines[(line - 1) as usize].to_string()));
-                                            exit(1);
+                                            panic!();
                                         }),
                                         line,
                                         char: start_char,
@@ -667,7 +669,7 @@ impl ParsedFile {
                                                 line,
                                                 format!("Unidentified token: {}", token),
                                                 lines[(line - 1) as usize].to_string()));
-                                            exit(1);
+                                            panic!();
                                         }),
                                         line,
                                         char: start_char,
@@ -686,7 +688,7 @@ impl ParsedFile {
                                                 line,
                                                 format!("Unidentified token: {}", token),
                                                 lines[(line - 1) as usize].to_string()));
-                                            exit(1);
+                                            panic!();
                                         }),
                                         line,
                                         char: start_char,
@@ -705,7 +707,7 @@ impl ParsedFile {
                                                 line,
                                                 format!("Unidentified token: {}", token),
                                                 lines[(line - 1) as usize].to_string()));
-                                            exit(1);
+                                            panic!();
                                         }),
                                         line,
                                         char: start_char,
@@ -724,7 +726,7 @@ impl ParsedFile {
                                                 line,
                                                 format!("Unidentified token: {}", token),
                                                 lines[(line - 1) as usize].to_string()));
-                                            exit(1);
+                                            panic!();
                                         }),
                                         line,
                                         char: start_char,
@@ -750,7 +752,7 @@ impl ParsedFile {
                                                 line,
                                                 format!("Unidentified token: {}", token),
                                                 lines[(line - 1) as usize].to_string()));
-                                            exit(1);
+                                            panic!();
                                         }),
                                         line,
                                         char: start_char,
@@ -769,7 +771,7 @@ impl ParsedFile {
                                                 line,
                                                 format!("Unidentified token: {}", token),
                                                 lines[(line - 1) as usize].to_string()));
-                                            exit(1);
+                                            panic!();
                                         }),
                                         line,
                                         char: start_char,
@@ -794,7 +796,7 @@ impl ParsedFile {
                                                 line,
                                                 format!("Unidentified token: {}", token),
                                                 lines[(line - 1) as usize].to_string()));
-                                            exit(1);
+                                            panic!();
                                         }),
                                         line,
                                         char: start_char,
@@ -813,7 +815,7 @@ impl ParsedFile {
                                                 line,
                                                 format!("Unidentified token: {}", token),
                                                 lines[(line - 1) as usize].to_string()));
-                                            exit(1);
+                                            panic!();
                                         }),
                                         line,
                                         char: start_char,

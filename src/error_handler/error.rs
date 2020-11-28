@@ -30,6 +30,4 @@ pub fn error_reporter(error: Error) {
         println!("{}{}", STYLE.paint("Line: "), Colour::White.italic().paint(error.line_text));
     }
     println!();
-
-    process::exit(-1);
 }
