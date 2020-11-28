@@ -97,6 +97,8 @@ pub enum Token {
     If,
     /// else
     Else,
+    /// return
+    Return
 }
 
 impl fmt::Display for Token {
@@ -147,7 +149,8 @@ impl fmt::Display for Token {
             Token::If => format!("If"),
             Token::Else => format!("Else"),
             Token::Colon => format!("Colon"),
-            Token::Pipe => format!("|")
+            Token::Pipe => format!("|"),
+            Token::Return => format!("Return")
         })
     }
 }

@@ -77,6 +77,19 @@ name. The extension is .bl. Binary packages should contain a main.bl, there shou
 } -> Main
 ```
 
+## Comments
+Comments are denoted with a `//`. e.g.
+```
+// This is a comment
+```
+Multiline comments will also be a thing although do not work as of the current version
+```
+/*
+This is a multiline comment
+*/
+```
+
+
 ## Compiler overview
 ### Project configuration
 - Load project TOML file

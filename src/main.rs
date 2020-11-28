@@ -10,6 +10,7 @@ use std::mem::take;
 mod token;
 mod config;
 mod error_handler;
+mod parser;
 
 fn main() {
     let matches = App::new("brrrLang Compiler")
@@ -49,10 +50,7 @@ fn compile() {
             let path_str = path.file_name().unwrap().to_str().unwrap().to_string();
             let source = read_file(&path).unwrap();
 
-            match token::tokenizer::ParsedFile::new(&source, &path_str) {
-                Some(parsed) => sender.send(parsed).unwrap(),
-                _ => {}
-            }
+            sender.send(token::tokenizer::ParsedFile::new(&source, &path_str));
         });
     }
 
@@ -63,7 +61,11 @@ fn compile() {
 
     // Collect all of the parsed files
     for result in rx {
-        parsed_files.push(result);
+        if let Some(result) = result {
+            parsed_files.push(result);
+        } else {
+
+        }
     }
 
     for file in parsed_files.iter() {

@@ -79,10 +79,9 @@ impl ParsedFile {
                     }
                     token += char.encode_utf8(&mut tmp);
                 } else if ml_comment {
-                    println!("{}, {}", char, chars[i + 1]);
                     if char == '*' && chars[i + 1] == '/' {
-                        println!("Multiline finished");
                         ml_comment = false;
+                        token = String::new();
                     }
                 } else {
                     match char {
@@ -876,15 +875,7 @@ pub struct ParsedToken {
 /// - `Some(Token)`: If a match can be found
 /// - `None`: If it is not a valid token
 fn get_token(source: &String) -> Option<Token> {
-    if Regex::new("[a-zA-Z]([0-9a-zA-Z_]+)?").unwrap().is_match(source) {
-        Some(Token::Identifier(source.to_owned()))
-    } else if Regex::new("[0-9]+").unwrap().is_match(source) {
-        Some(Token::Int(source.parse::<i32>().unwrap()))
-    } else if Regex::new("[0-9].[0-9]+").unwrap().is_match(source) {
-        Some(Token::Float(source.parse::<f32>().unwrap()))
-    } else if Regex::new("@[a-zA-Z]+").unwrap().is_match(source) {
-        Some(Token::Tag(source.replace("@", "")))
-    } else if source == "pub" {
+    if source == "pub" {
         Some(Token::Pub)
     } else if source == "while" {
         Some(Token::While)
@@ -906,7 +897,15 @@ fn get_token(source: &String) -> Option<Token> {
         Some(Token::Loop)
     } else if source == "for" {
         Some(Token::For)
-    } else {
+    } else if Regex::new("[a-zA-Z]([0-9a-zA-Z_]+)?").unwrap().is_match(source) {
+        Some(Token::Identifier(source.to_owned()))
+    } else if Regex::new("[0-9]+").unwrap().is_match(source) {
+        Some(Token::Int(source.parse::<i32>().unwrap()))
+    } else if Regex::new("[0-9].[0-9]+").unwrap().is_match(source) {
+        Some(Token::Float(source.parse::<f32>().unwrap()))
+    } else if Regex::new("@[a-zA-Z]+").unwrap().is_match(source) {
+        Some(Token::Tag(source.replace("@", "")))
+    }  else {
         None
     }
 }

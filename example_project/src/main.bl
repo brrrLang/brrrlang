@@ -2,15 +2,8 @@
 
 @import "Std";
 // This do be a comment
-/* This also
- * Do be
- * A multiline comment
-*/
 @use Std::IO::[PrintLine, ReadLine];
 
-/**
-Look ma, function documentation!
-*/
 () {
     96 -> new number;
     PrintLine("Hello, what is your name? ");
