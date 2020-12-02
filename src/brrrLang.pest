@@ -5,8 +5,34 @@ rbrace = _{ ")" }
 lcbrace = _{ "{" }
 rcbrace = _{ "}" }
 comma = _{ "," }
+pipe = _{ "|" }
 colon = _{ ":" }
+underscore = _{ "_" }
 scope_resolution = _{ "::" }
+
+or = { "||" }
+exclamation_mark = { "!" }
+and = { "&&" }
+plus = { "+" }
+minus = { "-" }
+eq = { "=" }
+lt = { "<" }
+gt = { ">" }
+lteq = { lt ~ eq }
+gteq = { gt ~ eq }
+
+operator = {
+      or
+    | exclamation_mark
+    | and
+    | plus
+    | minus
+    | eq
+    | lt
+    | gt
+    | gteq
+    | lteq
+}
 
 new_kw = { "new" }
 return_kw = { "return" }
@@ -42,28 +68,47 @@ fun_pub = {
 
 fun = {
  lbrace ~ ((param) ~ (comma ~ (param))+)? ~ rbrace ~ lcbrace ~
-    (stmt ~ semi_colon) * ~ expr?
+    ((stmt ~ semi_colon) | pg_flow) * ~ expr?
  ~ rcbrace
 }
 
+pg_flow = {
+      lp
+    | match_
+}
+
 stmt = _{
-     assignment
-    | lp
+      assignment
+    | return_
     | new_var
     | expr
 }
 
-lp = { loop_kw ~ lcbrace ~ (stmt ~ semi_colon) ~ rcbrace }
+operation = {
+    expression ~ operator ~ expression
+}
 
-expr = {
+lp = { loop_kw ~ lcbrace ~ (((stmt ~ semi_colon) | pg_flow)+)? ~ rcbrace }
+
+match_ = { (expr) ~ (match_brach) * }
+match_brach = { pipe ~ identifier ~ (lbrace ~ ident ~ (type_annotation)? ~ rbrace)? ~ ((lcbrace ~ (stmt ~ semi_colon | pg_flow) * ~ rcbrace) | stmt) }
+
+return_ = { return_kw ~ (expr)? }
+
+expression = {
       function_call
-      | break_kw
-      | continue_kw
       | term
 }
 
+expr = {
+        expression
+      | break_kw
+      | continue_kw
+      | operation
+}
+
 function_call = {
-    identifier ~ lbrace ~ (args)? ~ rbrace
+    identifier ~ (type_annotation)? ~ lbrace ~ (args)? ~ rbrace
 }
 
 args = {
@@ -86,7 +131,7 @@ integer = @{ "_"? ~ ASCII_DIGIT+ }
 
 decimal = @{ "_"? ~ ASCII_DIGIT+ ~ "." ~ ASCII_DIGIT* }
 
-ident = @{ !keyword ~ ASCII_ALPHA ~ (ASCII_ALPHANUMERIC | "_")* }
+ident = @{ (!keyword ~ ASCII_ALPHA ~ (ASCII_ALPHANUMERIC | "_")*) | underscore }
 
 identifier = @{ ident ~ ((scope_resolution ~ ident)+)? }
 

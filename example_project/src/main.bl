@@ -2,7 +2,8 @@
 
 @import "Std";
 // This do be a comment
-@use Std::IO::[PrintLine, ReadLine];
+@use Std::IO::PrintLine;
+@use Std::IO::ReadLine;
 
 () {
     96 -> new number;
