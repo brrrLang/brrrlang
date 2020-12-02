@@ -861,7 +861,7 @@ impl ParsedFile {
 /// - `token`: The token
 /// - `line`: The line in source it was found on
 /// - `char`: The position of the first character in source
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct ParsedToken {
     pub token: Token,
     pub line: i32,
@@ -875,6 +875,7 @@ pub struct ParsedToken {
 /// - `Some(Token)`: If a match can be found
 /// - `None`: If it is not a valid token
 fn get_token(source: &String) -> Option<Token> {
+    println!("{}", source);
     if source == "pub" {
         Some(Token::Pub)
     } else if source == "while" {
@@ -897,15 +898,15 @@ fn get_token(source: &String) -> Option<Token> {
         Some(Token::Loop)
     } else if source == "for" {
         Some(Token::For)
+    } else if Regex::new("@[a-zA-Z]+").unwrap().is_match(source) {
+        Some(Token::Tag(source.replace("@", "")))
     } else if Regex::new("[a-zA-Z]([0-9a-zA-Z_]+)?").unwrap().is_match(source) {
         Some(Token::Identifier(source.to_owned()))
     } else if Regex::new("[0-9]+").unwrap().is_match(source) {
         Some(Token::Int(source.parse::<i32>().unwrap()))
     } else if Regex::new("[0-9].[0-9]+").unwrap().is_match(source) {
         Some(Token::Float(source.parse::<f32>().unwrap()))
-    } else if Regex::new("@[a-zA-Z]+").unwrap().is_match(source) {
-        Some(Token::Tag(source.replace("@", "")))
-    }  else {
+    } else {
         None
     }
 }

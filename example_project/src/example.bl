@@ -2,11 +2,14 @@
 
 @import "Std";
 
-@use Std::IO::[ReadLine, PrintLine, StdErr];
-@use Std::String::[StrParse, StrFmt];
+@use Std::IO::ReadLine;
+@use Std::IO::PrintLine;
+@use Std::IO::StdErr;
+@use Std::String::StrParse;
+@use Std::String::StrFmt;
 
 () {
-    while true {
+    loop {
         ReadLine() -> new val;
         StrParse<i32>(val)
             | Ok(a) return a

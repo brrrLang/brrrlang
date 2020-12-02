@@ -11,6 +11,7 @@ mod token;
 mod config;
 mod error_handler;
 mod parser;
+mod lexer;
 
 fn main() {
     let matches = App::new("brrrLang Compiler")
@@ -49,8 +50,14 @@ fn compile() {
             let path = path.unwrap().path();
             let path_str = path.file_name().unwrap().to_str().unwrap().to_string();
             let source = read_file(&path).unwrap();
+            match token::tokenizer::ParsedFile::new(&source, &path_str) {
+                Some(parsed) => {
+                    let lexed = lexer::LexedFile::new(parsed);
+                    sender.send(Some(lexed))
+                }
+                None => sender.send(None)
+            };
 
-            sender.send(token::tokenizer::ParsedFile::new(&source, &path_str));
         });
     }
 
@@ -68,9 +75,7 @@ fn compile() {
         }
     }
 
-    for file in parsed_files.iter() {
-        println!("File: {}\nSource:{}\nTokens{:#?}\n", file.path,file.source, file.tokens)
-    }
+    println!("{:#?}", parsed_files);
 
     println!("{} {}", GREEN.bold().paint("Built"), WHITE.italic().paint(&project.project_name));
 }

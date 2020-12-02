@@ -1,0 +1,97 @@
+arrow = _{ "->" }
+semi_colon = _{ ";" }
+lbrace = _{ "(" }
+rbrace = _{ ")" }
+lcbrace = _{ "{" }
+rcbrace = _{ "}" }
+comma = _{ "," }
+colon = _{ ":" }
+scope_resolution = _{ "::" }
+
+new_kw = { "new" }
+return_kw = { "return" }
+loop_kw = { "loop" }
+if_kw = { "if" }
+else_kw = { "else" }
+pub_kw = { "pub" }
+break_kw = { "break" }
+continue_kw = { "continue" }
+
+keyword = {
+      new_kw
+    | break_kw
+    | continue_kw
+    | return_kw
+    | loop_kw
+    | if_kw
+    | else_kw
+    | pub_kw
+}
+
+program = _{ SOI ~ (fun_named | fun_pub | tag)* ~ EOI }
+
+tag = {"@" ~ ident ~ (term)? ~ semi_colon}
+
+fun_named = {
+ fun ~ arrow  ~ ident ~ (type_annotation)?
+}
+
+fun_pub = {
+ fun ~ arrow  ~ pub_kw ~ ident ~ (type_annotation)?
+}
+
+fun = {
+ lbrace ~ ((param) ~ (comma ~ (param))+)? ~ rbrace ~ lcbrace ~
+    (stmt ~ semi_colon) * ~ expr?
+ ~ rcbrace
+}
+
+stmt = _{
+     assignment
+    | lp
+    | new_var
+    | expr
+}
+
+lp = { loop_kw ~ lcbrace ~ (stmt ~ semi_colon) ~ rcbrace }
+
+expr = {
+      function_call
+      | break_kw
+      | continue_kw
+      | term
+}
+
+function_call = {
+    identifier ~ lbrace ~ (args)? ~ rbrace
+}
+
+args = {
+    expr ~ ("," ~ expr)?
+}
+
+assignment = { expr ~ arrow ~ (identifier | new_var) }
+
+param = { ident ~ type_annotation }
+
+type_annotation = {"<" ~ identifier ~ ">"}
+
+new_var = { new_kw ~ ident ~ type_annotation? }
+
+terms = { term+ }
+
+term = _{ string | decimal | integer | identifier | "(" ~ expr ~ ")"  }
+
+integer = @{ "_"? ~ ASCII_DIGIT+ }
+
+decimal = @{ "_"? ~ ASCII_DIGIT+ ~ "." ~ ASCII_DIGIT* }
+
+ident = @{ !keyword ~ ASCII_ALPHA ~ (ASCII_ALPHANUMERIC | "_")* }
+
+identifier = @{ ident ~ ((scope_resolution ~ ident)+)? }
+
+string = @{ "\"" ~ ( "\"\"" | (!"\"" ~ ANY) )* ~ "\"" }
+
+WHITESPACE = _{ " " | "\t" | "\n" }
+
+COMMENT = _{ ("//" ~ (!"\n" ~ ANY)* | "/*" ~ (!"*/" ~ ANY)*) }
