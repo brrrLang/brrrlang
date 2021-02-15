@@ -1,4 +1,5 @@
 arrow = _{ "->" }
+assign = _{ "=" }
 semi_colon = _{ ";" }
 lbrace = _{ "(" }
 rbrace = _{ ")" }
@@ -7,6 +8,7 @@ rcbrace = _{ "}" }
 comma = _{ "," }
 pipe = _{ "|" }
 colon = _{ ":" }
+period = _{ "." }
 underscore = _{ "_" }
 scope_resolution = _{ "::" }
 
@@ -15,11 +17,23 @@ exclamation_mark = { "!" }
 and = { "&&" }
 plus = { "+" }
 minus = { "-" }
-eq = { "=" }
+eq = { "==" }
 lt = { "<" }
 gt = { ">" }
 lteq = { lt ~ eq }
 gteq = { gt ~ eq }
+
+multi_use = {
+    mu_root ~ lcbrace ~ mu_children? ~ rcbrace
+}
+
+mu_root = {
+    identifier ~ scope_resolution
+}
+
+mu_children = {
+    (identifier | multi_use) ~ (comma ~ (multi_use | identifier)) *
+}
 
 operator = {
       or
@@ -35,6 +49,7 @@ operator = {
 }
 
 new_kw = { "new" }
+let_kw = { "let" }
 return_kw = { "return" }
 loop_kw = { "loop" }
 if_kw = { "if" }
@@ -42,9 +57,12 @@ else_kw = { "else" }
 pub_kw = { "pub" }
 break_kw = { "break" }
 continue_kw = { "continue" }
+define_kw = { "define" }
+struct_kw = { "struct" }
 
 keyword = {
       new_kw
+    | let_kw
     | break_kw
     | continue_kw
     | return_kw
@@ -52,80 +70,101 @@ keyword = {
     | if_kw
     | else_kw
     | pub_kw
+    | define_kw
+    | struct_kw
 }
 
-program = _{ SOI ~ (fun_named | fun_pub | tag)* ~ EOI }
+program = _{ SOI ~ (fun_named | element | tag | struct_def)* ~ EOI }
 
-tag = {"@" ~ ident ~ (term)? ~ semi_colon}
+tag = {"@" ~ ident ~ (multi_use | term)? ~ semi_colon}
 
 fun_named = {
- fun ~ arrow  ~ ident ~ (type_annotation)?
-}
-
-fun_pub = {
- fun ~ arrow  ~ pub_kw ~ ident ~ (type_annotation)?
+    pub_kw ? ~ ident ~ fun
 }
 
 fun = {
- lbrace ~ ((param) ~ (comma ~ (param))+)? ~ rbrace ~ lcbrace ~
-    ((stmt ~ semi_colon) | pg_flow) * ~ expr?
- ~ rcbrace
-}
-
-pg_flow = {
-      lp
-    | match_
+    type_annotation ? ~ lbrace ~ (param ~ (comma ~ param) * ) ? ~ rbrace ~ arrow ~ lcbrace ~
+     (stmt ~ semi_colon) * ~ rcbrace
 }
 
 stmt = _{
       assignment
     | return_
     | new_var
+    | continue_kw
+    | break_kw
     | expr
 }
-
-operation = {
-    expression ~ operator ~ expression
-}
-
-lp = { loop_kw ~ lcbrace ~ (((stmt ~ semi_colon) | pg_flow)+)? ~ rcbrace }
-
-match_ = { (expr) ~ (match_brach) * }
-match_brach = { pipe ~ identifier ~ (lbrace ~ ident ~ (type_annotation)? ~ rbrace)? ~ ((lcbrace ~ (stmt ~ semi_colon | pg_flow) * ~ rcbrace) | stmt) }
 
 return_ = { return_kw ~ (expr)? }
 
 expression = {
-      function_call
-      | term
+      term
 }
 
 expr = {
-        expression
-      | break_kw
-      | continue_kw
-      | operation
+        function_calls
+      | (!function_call ~ expression)
+      | method_calls
+      | new_obj
+}
+
+function_calls = {
+    function_call ~ ( period ~ function_call ) *
+}
+
+method_calls = {
+    method_call ~ ( period ~ function_call ) *
+}
+
+method_call = {
+    ((new_obj | identifier | function_call) ~ period ~ function_call)
 }
 
 function_call = {
     identifier ~ (type_annotation)? ~ lbrace ~ (args)? ~ rbrace
 }
 
-args = {
-    expr ~ ("," ~ expr)?
+new_obj = {
+    new_kw ~ identifier ~ lbrace ~ (args)? ~ rbrace
 }
 
-assignment = { expr ~ arrow ~ (identifier | new_var) }
+args = {
+    expr ~ ("," ~ expr) * ?
+}
+
+assignment = { (identifier | new_var) ~ assign ~ expr }
 
 param = { ident ~ type_annotation }
 
 type_annotation = {"<" ~ identifier ~ ">"}
 
-new_var = { new_kw ~ ident ~ type_annotation? }
+new_var = { let_kw ~ ident ~ type_annotation? }
 
 terms = { term+ }
 
 term = _{ string | decimal | integer | identifier | "(" ~ expr ~ ")"  }
+
+struct_def = {
+    pub_kw ? ~ struct_kw ~ ident ~ lcbrace ~ (field | fun_named ) * ~ rcbrace
+}
+
+
+element = {
+    ident ~ arrow ~ lcbrace ~ (prop | field | fun_named | define) * ~ rcbrace
+}
+
+field = {
+    ident ~ type_annotation ~ semi_colon
+}
+
+prop = {
+    ident ~ arrow ~ (term | (lcbrace ~ element ~ (comma ~ element) * ~ comma?  ~ rcbrace ))
+}
+
+define = {
+    define_kw ~ ident ~ identifier ~ semi_colon
+}
 
 integer = @{ "_"? ~ ASCII_DIGIT+ }
 
@@ -133,7 +172,7 @@ decimal = @{ "_"? ~ ASCII_DIGIT+ ~ "." ~ ASCII_DIGIT* }
 
 ident = @{ (!keyword ~ ASCII_ALPHA ~ (ASCII_ALPHANUMERIC | "_")*) | underscore }
 
-identifier = @{ ident ~ ((scope_resolution ~ ident)+)? }
+identifier = @{ ident ~ (((scope_resolution | period) ~ ident)+)? }
 
 string = @{ "\"" ~ ( "\"\"" | (!"\"" ~ ANY) )* ~ "\"" }
 

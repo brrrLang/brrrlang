@@ -1,0 +1,56 @@
+@pkg "Example";
+@include "App";
+
+@use "Std";
+
+@import Std::App::{App, Column, Row, Label};
+@import Std::App::Input::{Button, TextBox};
+@import Std::App::Dialog::MsgBox;
+
+App -> {
+    define Store App::AppState;
+
+    Layout -> {
+        Column -> {
+            Layout -> {
+                // Name field
+                Row -> {
+                    Layout -> {
+                        Label -> {
+                            Text -> "Name"
+                        },
+                        TextInput -> {
+                            OnChange(value<string>) -> {
+                                this.name = value;
+                            }
+                        },
+                    }
+                },
+
+                // Age field
+                Row -> {
+                    Layout -> {
+                        Label -> {
+                            Text -> "Age"
+                        },
+                        TextInput -> {
+                            Validate(value<string>) -> {
+                                value.isNumberic();
+                            }
+
+                            OnChange(value<string>) -> {
+                                this.age = i32::parse(value);
+                            }
+                        },
+                    }
+                },
+
+                Button -> {
+                    OnClick() -> {
+                        new MsgBox("Hello {this.name}, you are {this.age} years old").Info().Ok().Show();
+                    }
+                }
+            }
+        }
+    }
+}

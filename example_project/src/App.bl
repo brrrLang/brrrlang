@@ -1,0 +1,11 @@
+@pkg "App";
+
+pub struct AppState {
+    age<i32>;
+    name<string>;
+
+    New() -> {
+        this.age = 0;
+        this.name = "";
+    }
+}

@@ -1,3 +1,7 @@
+extern crate pest;
+#[macro_use]
+extern crate pest_derive;
+
 use std::{fs, io};
 use std::io::prelude::*;
 
@@ -12,6 +16,12 @@ mod config;
 mod error_handler;
 mod parser;
 mod lexer;
+
+use pest::Parser;
+
+#[derive(Parser)]
+#[grammar = "brrrLang.pest"]
+pub struct SourceParser;
 
 fn main() {
     let matches = App::new("brrrLang Compiler")
@@ -42,40 +52,20 @@ fn compile() {
     // Get all of the files in the src directory
     let paths = fs::read_dir("./src").unwrap();
 
-    //  Create a Senders and Receivers for multithreading goodness.
-    let (tx, rx) = std::sync::mpsc::channel();
-    for path in paths {
-        let sender = tx.clone();
-        std::thread::spawn(move || {
-            let path = path.unwrap().path();
-            let path_str = path.file_name().unwrap().to_str().unwrap().to_string();
-            let source = read_file(&path).unwrap();
-            match token::tokenizer::ParsedFile::new(&source, &path_str) {
-                Some(parsed) => {
-                    let lexed = lexer::LexedFile::new(parsed);
-                    sender.send(Some(lexed))
-                }
-                None => sender.send(None)
-            };
-
-        });
-    }
-
-    drop(tx);
-
     // Vector to store parsed files
-    let mut parsed_files = vec!();
+    // let mut parsed_files = vec!();
 
-    // Collect all of the parsed files
-    for result in rx {
-        if let Some(result) = result {
-            parsed_files.push(result);
-        } else {
-
-        }
+    for path in paths {
+        let path = path.unwrap().path();
+        let path_str = path.file_name().unwrap().to_str().unwrap().to_string();
+        let source = read_file(&path).unwrap();
+        let mut result = SourceParser::parse(Rule::program, &source)
+            .expect("unsuccessful parse");
+        println!("{}: {:#?}", Color::Cyan.bold().paint(path_str), result);
+        // parsed_files.push(result.next().unwrap());
     }
 
-    println!("{:#?}", parsed_files);
+    // println!("{:#?}", parsed_files);
 
     println!("{} {}", GREEN.bold().paint("Built"), WHITE.italic().paint(&project.project_name));
 }

@@ -152,7 +152,6 @@ pub fn load_projects() -> Config {
                             match &dependencies_table[0] {
                                 Value::Table(dependencies_list) => {
                                     for dependency in dependencies_list.iter() {
-                                        println!("Dependency: {:?}",dependency);
                                         match dependency.1 {
                                             Value::String(dependency_version) => {
                                                 conf_struct.dependencies.append(&mut vec!((dependency.0.clone(),dependency_version.clone())));
