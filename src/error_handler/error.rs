@@ -1,5 +1,3 @@
-use std::process;
-
 use ansi_term::Colour;
 
 use crate::error_handler::*;

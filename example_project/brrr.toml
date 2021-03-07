@@ -1,7 +1,8 @@
-[[project]]
+[project]
 name = "ExampleProject"
 version = "1.0.0"
 
-[[dependencies]]
+
+[dependencies]
 Yes = "0.0.2"
 Naslkdnaslkd = "0.0.1"

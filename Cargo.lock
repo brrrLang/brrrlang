@@ -74,6 +74,7 @@ dependencies = [
  "pest",
  "pest_derive",
  "regex",
+ "serde",
  "toml",
 ]
 
@@ -102,6 +103,7 @@ dependencies = [
  "textwrap",
  "unicode-width",
  "vec_map",
+ "yaml-rust",
 ]
 
 [[package]]
@@ -251,6 +253,20 @@ name = "serde"
 version = "1.0.116"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "96fe57af81d28386a513cbc6858332abc6117cfdb5999647c6444b8f43a370a5"
+dependencies = [
+ "serde_derive",
+]
+
+[[package]]
+name = "serde_derive"
+version = "1.0.116"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f630a6370fd8e457873b4bd2ffdae75408bc291ba72be773772a4c2a065d9ae8"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
 
 [[package]]
 name = "sha-1"
@@ -359,3 +375,9 @@ name = "winapi-x86_64-pc-windows-gnu"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "712e227841d057c1ee1cd2fb22fa7e5a5461ae8e48fa2ca79ec42cfc1931183f"
+
+[[package]]
+name = "yaml-rust"
+version = "0.3.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e66366e18dc58b46801afbf2ca7661a9f59cc8c5962c29892b6039b4f86fa992"

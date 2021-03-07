@@ -1,78 +1,65 @@
-extern crate pest;
+mod error_handler;
+mod config;
+mod compiler;
+
 #[macro_use]
 extern crate pest_derive;
 
-use std::{fs, io};
-use std::io::prelude::*;
+#[macro_use]
+extern crate clap;
 
-use clap::{App, SubCommand};
-use ansi_term::Color;
-use std::path::PathBuf;
-use std::panic::{catch_unwind, set_hook, take_hook};
-use std::mem::take;
-
-mod token;
-mod config;
-mod error_handler;
-mod parser;
-mod lexer;
-
-use pest::Parser;
-
-#[derive(Parser)]
-#[grammar = "brrrLang.pest"]
-pub struct SourceParser;
+use clap::{App};
+use crate::config::Config;
+use std::fs;
+use std::path::{Path, PathBuf};
 
 fn main() {
-    let matches = App::new("brrrLang Compiler")
-        .version("0.1.0")
-        .about("All the tools you need for brrrLang")
-        .subcommand(SubCommand::with_name("run")
-            .about("Compiles and runs you project")
-            .version("0.1.0"))
-        .get_matches();
+    let yaml = load_yaml!("clap.yaml");
+    let matches = App::from_yaml(yaml).get_matches();
 
-    // Run subcommand
-    if let Some(_matches) = matches.subcommand_matches("run") {
-        compile();
+    let conf = Config::load();
+
+    // You can handle information about subcommands by requesting their matches by name
+    // (as below), requesting just the name used, or both at the same time
+    if let Some(_matches) = matches.subcommand_matches("build") {
+        info("Compiling".parse().unwrap(), format!("{}@{}", conf.project.name, conf.project.version));
+        let files = index_dir("src");
+        for file in files.iter() {
+            info("Compile file".to_string(), file.display().to_string());
+            let source = fs::read_to_string(file).unwrap();
+            let config_clone = conf.clone();
+            // std::thread::spawn(move || {
+                compiler::compile(source, config_clone)
+            // });
+        }
     }
 }
 
-fn compile() {
-    // Load the project configuration
-    let project = config::load_projects();
+/// Finds all files in a given directory
+fn index_dir<P: AsRef<Path>>(dir: P) -> Vec<PathBuf> {
+    let mut p = vec!();
 
-    // Terminal formatting stuff
-    const GREEN: Color = Color::Green;
-    const WHITE: Color = Color::White;
-
-    println!("{} {}", GREEN.bold().paint("Building"),
-             WHITE.italic().paint(&project.project_name));
-
-    // Get all of the files in the src directory
-    let paths = fs::read_dir("./src").unwrap();
-
-    // Vector to store parsed files
-    // let mut parsed_files = vec!();
-
-    for path in paths {
-        let path = path.unwrap().path();
-        let path_str = path.file_name().unwrap().to_str().unwrap().to_string();
-        let source = read_file(&path).unwrap();
-        let mut result = SourceParser::parse(Rule::program, &source)
-            .expect("unsuccessful parse");
-        println!("{}: {:#?}", Color::Cyan.bold().paint(path_str), result);
-        // parsed_files.push(result.next().unwrap());
+    match fs::read_dir(dir) {
+        Err(why) => println!("! {:?}", why.kind()),
+        Ok(paths) => for path in paths {
+            let dir = path.unwrap();
+            if dir.metadata().unwrap().is_dir() {
+                p.extend(index_dir(dir.path()));
+            } else {
+                p.push(dir.path());
+            }
+        },
     }
 
-    // println!("{:#?}", parsed_files);
 
-    println!("{} {}", GREEN.bold().paint("Built"), WHITE.italic().paint(&project.project_name));
+    p
 }
 
-fn read_file(path: &PathBuf) -> Result<String, io::Error> {
-    let mut file = fs::File::open(path)?;
-    let mut result = String::new();
-    file.read_to_string(&mut result)?;
-    Ok(result)
+fn info(msg: String, data: String) {
+    println!("{} {} {}",
+             ansi_term::Color::Green.bold().paint("=>"),
+             ansi_term::Color::Green.paint(
+                 format!("{}",
+                         msg)),
+             data);
 }

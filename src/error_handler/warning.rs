@@ -4,6 +4,7 @@ use crate::error_handler::*;
 
 const STYLE: Colour = Colour::Yellow;
 
+#[allow(dead_code)]
 pub fn warning_reporter(warning: Warning) {
     println!("{}{}",
              STYLE.bold().paint(format!("\n{} warning", warning.error_area)),

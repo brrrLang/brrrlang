@@ -8,13 +8,14 @@ pub struct Warning {
 	pub message: String,
 	pub line_text: String,
 }
+#[allow(dead_code)]
 impl Warning {
 	pub fn new(error_area: String, line_num: i32, message: String, line_text: String) -> Warning {
 		return Warning {
-			error_area: error_area,
-			line_num: line_num,
-			message: message,
-			line_text: line_text,
+			error_area,
+			line_num,
+			message,
+			line_text,
 		}
 	}
 }

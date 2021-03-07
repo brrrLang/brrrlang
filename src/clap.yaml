@@ -1,0 +1,13 @@
+name: brrrLang
+version: "1.0"
+author: Nathan H. <me@laspruca.nz>
+about: Compiler toolkit for brrrLang
+settings: [
+  "ColorAlways",
+  "ColoredHelp"
+]
+subcommands:
+  - build:
+      help: builds a project
+  - run:
+    help: builds and runs a project
